@@ -1,0 +1,403 @@
+.loginPage {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(350px, 0.92fr) 1.08fr;
+  background: #fff;
+}
+
+.loginPage :global(.login-visual) {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 36px clamp(35px, 6vw, 82px) 27px;
+  background: #6654d6;
+  color: white;
+  isolation: isolate;
+}
+
+.loginPage :global(.login-visual)::before,
+.loginPage :global(.login-visual)::after {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid #ffffff20;
+  border-radius: 50%;
+  content: "";
+}
+
+.loginPage :global(.login-visual)::before {
+  top: 18%;
+  left: -15%;
+  width: 120%;
+  aspect-ratio: 1;
+}
+
+.loginPage :global(.login-visual)::after {
+  top: 25%;
+  left: -7%;
+  width: 104%;
+  border-color: #ffffff1c;
+  aspect-ratio: 1;
+}
+
+.loginPage :global(.brand-on-dark) {
+  color: white;
+}
+
+.loginPage :global(.brand-on-dark) :global(.study-mark) {
+  color: #fff;
+}
+
+.loginPage :global(.login-visual-content) {
+  position: relative;
+  max-width: 410px;
+  margin-top: -20px;
+}
+
+.loginPage :global(.visual-spark) {
+  margin-bottom: 23px;
+  color: #ffdfac;
+  font-size: 25px;
+}
+
+.loginPage :global(.visual-kicker) {
+  margin: 0 0 16px;
+  color: #d8d2ff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+}
+
+.loginPage :global(.login-visual h1) {
+  margin: 0;
+  font-size: clamp(39px, 4.2vw, 56px);
+  font-weight: 630;
+  line-height: 1.14;
+  letter-spacing: -2.8px;
+}
+
+.loginPage :global(.login-visual h1 span) {
+  color: #d9d4ff;
+}
+
+.loginPage :global(.visual-description) {
+  max-width: 350px;
+  margin: 20px 0 29px;
+  color: #e1ddff;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.loginPage :global(.visual-quote) {
+  padding: 15px 0 0;
+  border-top: 1px solid #ffffff39;
+}
+
+.loginPage :global(.quote-stars) {
+  color: #ffdc98;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.loginPage :global(.visual-quote p) {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.loginPage :global(.quote-byline) {
+  color: #d0cafa;
+  font-size: 10px;
+}
+
+.loginPage :global(.login-visual-bottom) {
+  display: flex;
+  justify-content: space-between;
+  color: #d3cefa;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+}
+
+.loginPage :global(.login-decoration) {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid #ffffff24;
+  border-radius: 50%;
+}
+
+.loginPage :global(.deco-one) {
+  right: -94px;
+  bottom: 9%;
+  width: 200px;
+  height: 200px;
+}
+
+.loginPage :global(.deco-two) {
+  right: -69px;
+  bottom: 13%;
+  width: 150px;
+  height: 150px;
+}
+
+.loginPage :global(.login-form-side) {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 75px 40px 55px;
+}
+
+.loginPage :global(.login-top-link) {
+  position: absolute;
+  top: 37px;
+  right: clamp(30px, 5vw, 70px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9699a2;
+  font-size: 10px;
+}
+
+.loginPage :global(.login-top-link a) {
+  color: #6251cd;
+  font-weight: 650;
+}
+
+.loginPage :global(.login-top-link a span) {
+  margin-left: 4px;
+  font-size: 13px;
+}
+
+.loginPage :global(.login-card) {
+  width: min(370px, 100%);
+  margin-top: -3px;
+}
+
+.loginPage :global(.mobile-brand) {
+  display: none;
+}
+
+.loginPage :global(.login-heading-icon) {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  margin-bottom: 22px;
+  border-radius: 11px;
+  background: #f1efff;
+  color: #6c59d5;
+  font-size: 19px;
+}
+
+.loginPage :global(.login-card .section-label) {
+  margin: 0 0 11px;
+  font-size: 9px;
+}
+
+.loginPage :global(.login-card h2) {
+  margin: 0;
+  color: #272c36;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -1.7px;
+}
+
+.loginPage :global(.login-intro) {
+  margin: 10px 0 29px;
+  color: #858a94;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.loginPage :global(.google-button) {
+  display: flex;
+  width: 100%;
+  min-height: 49px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid #e4e5e9;
+  border-radius: 7px;
+  background: white;
+  color: #373a43;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.loginPage :global(.google-button:hover) {
+  border-color: #c8c5dd;
+  background: #fcfbff;
+  box-shadow: 0 3px 12px #443d7310;
+}
+
+.loginPage :global(.google-button:focus-visible),
+.loginPage :global(a:focus-visible) {
+  outline: 3px solid #aea2fa;
+  outline-offset: 3px;
+}
+
+.loginPage :global(.google-button svg) {
+  width: 18px;
+  height: 18px;
+}
+
+.loginPage :global(.auth-notice) {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f7f5ff;
+  color: #6156a6;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.loginPage :global(.login-divider) {
+  position: relative;
+  margin: 29px 0 25px;
+  border-top: 1px solid #eeedf0;
+  text-align: center;
+}
+
+.loginPage :global(.login-divider span) {
+  position: relative;
+  top: -7px;
+  padding: 0 12px;
+  background: #fff;
+  color: #b0b1b8;
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 1.1px;
+}
+
+.loginPage :global(.login-reassurance) {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.loginPage :global(.reassurance-icon) {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: #fff3ec;
+  color: #e99c7c;
+  font-size: 15px;
+}
+
+.loginPage :global(.reassurance-sun) {
+  background: #eff7f0;
+  color: #70ad89;
+  font-size: 18px;
+}
+
+.loginPage :global(.login-reassurance strong) {
+  color: #4a4c56;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.loginPage :global(.login-reassurance p) {
+  margin: 4px 0 0;
+  color: #92949d;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.loginPage :global(.login-footer) {
+  position: absolute;
+  right: clamp(30px, 5vw, 70px);
+  bottom: 28px;
+  left: clamp(30px, 5vw, 70px);
+  display: flex;
+  justify-content: space-between;
+  color: #989ba4;
+  font-size: 9px;
+}
+
+.loginPage :global(.login-footer a) {
+  color: #6d5bd5;
+  font-weight: 600;
+}
+
+.loginPage :global(.login-footer > span span) {
+  color: #e1a477;
+}
+
+@media (max-width: 850px) {
+  .loginPage {
+    grid-template-columns: minmax(300px, 0.85fr) 1.15fr;
+  }
+
+  .loginPage :global(.login-visual) {
+    padding-right: 35px;
+    padding-left: 35px;
+  }
+
+  .loginPage :global(.login-visual h1) {
+    font-size: 43px;
+  }
+
+  .loginPage :global(.login-form-side) {
+    padding-right: 30px;
+    padding-left: 30px;
+  }
+}
+
+@media (max-width: 620px) {
+  .loginPage {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .loginPage :global(.login-visual) {
+    display: none;
+  }
+
+  .loginPage :global(.login-form-side) {
+    min-height: 100svh;
+    padding: 83px 25px 75px;
+  }
+
+  .loginPage :global(.login-top-link) {
+    top: 28px;
+    right: 24px;
+  }
+
+  .loginPage :global(.login-card) {
+    width: min(370px, 100%);
+    margin-top: 0;
+  }
+
+  .loginPage :global(.mobile-brand) {
+    display: block;
+    margin-bottom: 50px;
+  }
+
+  .loginPage :global(.login-heading-icon) {
+    margin-bottom: 19px;
+  }
+
+  .loginPage :global(.login-card h2) {
+    font-size: 32px;
+  }
+
+  .loginPage :global(.login-footer) {
+    right: 24px;
+    bottom: 21px;
+    left: 24px;
+  }
+
+  .loginPage :global(.login-footer > span) {
+    display: none;
+  }
+}
