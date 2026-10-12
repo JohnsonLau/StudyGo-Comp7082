@@ -13,9 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StudyGo — Make study time your best time",
-  description:
-    "Turn overwhelming study plans into small, doable steps with StudyGo.",
+  title: "StudyGo — Your next chapter starts here",
+  description: "Sign in to your StudyGo student workspace.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

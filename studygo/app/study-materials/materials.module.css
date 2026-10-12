@@ -1,0 +1,380 @@
+.materialsPage {
+  width: min(100%, 1030px);
+  margin: 0 auto;
+  padding: 26px 36px 42px;
+}
+
+.pageHeading {
+  margin-bottom: 19px;
+}
+
+.pageHeading h1 {
+  margin: 0 0 5px;
+  color: #2c303b;
+  font-size: 21px;
+  font-weight: 640;
+  letter-spacing: -0.45px;
+}
+
+.pageHeading p {
+  margin: 0;
+  color: #81838e;
+  font-size: 10px;
+}
+
+.topGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(210px, 0.95fr);
+  gap: 16px;
+}
+
+.uploadCard,
+.agentCard,
+.libraryCard {
+  border: 1px solid #e8e6e2;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.uploadCard {
+  min-width: 0;
+  padding: 17px 16px 12px;
+}
+
+.uploadCard h2,
+.agentCard h2,
+.libraryHeading h2 {
+  margin: 0;
+  color: #303440;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.1px;
+}
+
+.dropZone {
+  display: flex;
+  min-height: 152px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  border: 1px dashed #8782d5;
+  border-radius: 9px;
+  background: #fcfbff;
+  color: #303440;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.dropZone.dragging {
+  border-color: #514caf;
+  background: #f3f1ff;
+}
+
+.uploadIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  margin-bottom: 8px;
+  border-radius: 9px;
+  background: #f0effa;
+  color: #615fc2;
+}
+
+.uploadIcon .workspace-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.dropZone > strong {
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.fileTypes {
+  margin-top: 7px;
+  color: #868895;
+  font-size: 8px;
+}
+
+.browseButton {
+  display: grid;
+  min-height: 30px;
+  place-items: center;
+  margin-top: 9px;
+  padding: 0 12px;
+  border: 1px solid #e7e5e2;
+  border-radius: 6px;
+  background: #fff;
+  color: #353945;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.browseButton:hover {
+  border-color: #c9c7e6;
+  background: #fbfaff;
+}
+
+.dropZone:focus-within {
+  outline: 2px solid #8584d2;
+  outline-offset: 2px;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.privacyNote,
+.uploadMessage {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 11px 0 0;
+  color: #858793;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.privacyNote > span {
+  color: #73758a;
+  font-size: 11px;
+}
+
+.uploadMessage {
+  color: #a44848;
+}
+
+.agentCard {
+  padding: 18px 17px 14px;
+}
+
+.agentCard > .workspace-icon {
+  width: 19px;
+  height: 19px;
+  margin: 14px 0 7px;
+  color: #5f5dc0;
+}
+
+.agentCard > p {
+  margin: 0;
+  color: #828591;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.agentCard ul {
+  display: grid;
+  gap: 11px;
+  margin: 12px 0 13px;
+  padding: 0;
+  list-style: none;
+}
+
+.agentCard li {
+  position: relative;
+  padding-left: 16px;
+  color: #3d414e;
+  font-size: 8px;
+}
+
+.agentCard li::before {
+  position: absolute;
+  left: 0;
+  color: #5a59b7;
+  content: "✓";
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.agentCard small {
+  display: block;
+  color: #898b96;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.libraryCard {
+  margin-top: 18px;
+  padding: 17px 16px 7px;
+}
+
+.libraryHeading {
+  margin-bottom: 12px;
+}
+
+.libraryHeading p {
+  margin: 6px 0 0;
+  color: #828591;
+  font-size: 9px;
+}
+
+.tableScroller {
+  overflow-x: auto;
+}
+
+.materialTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.materialTable th {
+  height: 24px;
+  color: #858895;
+  font-size: 7px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.materialTable th:first-child {
+  width: 69%;
+}
+
+.materialTable th:nth-child(2) {
+  width: 13%;
+}
+
+.materialTable th:nth-child(3) {
+  width: 13%;
+}
+
+.materialTable td {
+  height: 50px;
+  border-top: 1px solid #efeeeb;
+  color: #80838f;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.materialTable td:first-child {
+  color: #303440;
+}
+
+.fileCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.documentIcon {
+  display: grid;
+  width: 14px;
+  height: 17px;
+  flex: 0 0 14px;
+  place-items: center;
+  color: #615fc0;
+}
+
+.documentIcon .workspace-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.fileCell > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.fileCell strong {
+  overflow: hidden;
+  color: #303440;
+  font-size: 8px;
+  font-weight: 550;
+  text-overflow: ellipsis;
+}
+
+.fileCell small {
+  color: #858793;
+  font-size: 7px;
+}
+
+.statusPill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: #edf6f2;
+  color: #458773;
+  font-size: 7px;
+}
+
+.statusPill.selected {
+  background: #f0effa;
+  color: #5958ac;
+}
+
+.materialTable td:last-child {
+  text-align: right;
+}
+
+.rowMenu {
+  color: #777987;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 850px) {
+  .materialsPage {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .topGrid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(185px, 0.9fr);
+    gap: 12px;
+  }
+
+  .uploadCard {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 620px) {
+  .materialsPage {
+    padding: 22px 17px 34px;
+  }
+
+  .pageHeading h1 {
+    font-size: 19px;
+  }
+
+  .topGrid {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  .agentCard {
+    padding: 15px;
+  }
+
+  .agentCard ul {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .libraryCard {
+    margin-top: 13px;
+    padding: 15px 12px 5px;
+  }
+
+  .materialTable {
+    min-width: 510px;
+  }
+}
+
+@media (max-width: 380px) {
+  .materialsPage {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+}

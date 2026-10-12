@@ -1,3 +1,14 @@
+.loginLoading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #6654d6;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+
 .loginPage {
   display: grid;
   min-height: 100vh;
@@ -234,6 +245,11 @@
   border-color: #c8c5dd;
   background: #fcfbff;
   box-shadow: 0 3px 12px #443d7310;
+}
+
+.loginPage :global(.google-button:disabled) {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .loginPage :global(.google-button:focus-visible),
