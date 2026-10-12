@@ -18,8 +18,8 @@ const initialMaterials: Material[] = [
   { name: "Essay draft — industrialization.pdf", size: "1.1 MB", course: "History", added: "Added Oct 2", local: false },
 ];
 
-const allowedExtensions = /\.(pdf|docx|pptx)$/i;
-const maxFileSize = 20 * 1024 * 1024;
+const allowedExtensions = /\.(pdf|docx|jpe?g|png|doc)$/i;
+const maxFileSize = 2 * 1024 * 1024;
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) {
@@ -27,6 +27,35 @@ function formatSize(bytes: number) {
   }
 
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function uploadFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    console.log(response.url, response.redirected);
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Upload failed (${response.status}): ${text}`);
+    }
+    
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Upload failed with status ${response.status}`);
+    }
+
+    console.log("File uploaded successfully:", data);
+  } catch (error) {
+    console.error("Error uploading file:", error);
+  }
 }
 
 export default function MaterialsContent() {
@@ -41,9 +70,9 @@ export default function MaterialsContent() {
 
     for (const file of Array.from(files)) {
       if (!allowedExtensions.test(file.name)) {
-        rejected.push(`${file.name}: use a PDF, DOCX, or PPTX file.`);
+        rejected.push(`${file.name}: use a PDF, DOCX, DOC, JPEG, or PNG file.`);
       } else if (file.size > maxFileSize) {
-        rejected.push(`${file.name}: files must be 20 MB or smaller.`);
+        rejected.push(`${file.name}: files must be 2 MB or smaller.`);
       } else {
         accepted.push({
           name: file.name,
@@ -52,6 +81,7 @@ export default function MaterialsContent() {
           added: "Selected just now",
           local: true,
         });
+        uploadFile(file);
       }
     }
 
@@ -102,10 +132,10 @@ export default function MaterialsContent() {
           >
             <span className={styles.uploadIcon}><WorkspaceIcon name="upload" /></span>
             <strong>Drop your files here, or browse</strong>
-            <span className={styles.fileTypes}>PDF, DOCX or PPTX · Up to 20 MB per file</span>
+            <span className={styles.fileTypes}>PDF, DOCX, DOC, JPEG, or PNG · Up to 2 MB per file</span>
             <label className={styles.browseButton} htmlFor="study-material-files">Browse files</label>
             <input
-              accept=".pdf,.docx,.pptx"
+              accept=".pdf,.docx,.doc,.jpg,.jpeg,.png"
               className={styles.fileInput}
               id="study-material-files"
               multiple
