@@ -101,6 +101,7 @@ export default function MaterialsContent() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
   const [isAddingCourse, setIsAddingCourse] = useState(false);
+  const [isSavingCourse, setIsSavingCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [courseFilter, setCourseFilter] = useState("all");
@@ -269,6 +270,7 @@ export default function MaterialsContent() {
   }
 
   async function confirmNewCourse() {
+    if (isSavingCourse) return;
     const name = newCourseName.trim();
     if (!name) return;
     const existing = courses.find(course => course.name.toLowerCase() === name.toLowerCase());
@@ -278,6 +280,7 @@ export default function MaterialsContent() {
       setNewCourseName("");
       return;
     }
+    setIsSavingCourse(true);
     try {
       const supabase = createSupabaseBrowserClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -286,7 +289,8 @@ export default function MaterialsContent() {
         .insert({ name, user_id: user.id })
         .select("id, code, name, term, status")
         .single();
-      if (insertError || !data) throw new Error("Could not add this course. Please try again.");
+      if (insertError) throw new Error(`Could not add this course: ${insertError.message}`);
+      if (!data) throw new Error("Could not add this course. Please try again.");
       setCourses(current => [...current, data].sort((left, right) => left.name.localeCompare(right.name)));
       setPendingCourseId(data.id);
       setIsAddingCourse(false);
@@ -294,6 +298,8 @@ export default function MaterialsContent() {
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not add this course. Please try again.");
+    } finally {
+      setIsSavingCourse(false);
     }
   }
 
@@ -380,7 +386,7 @@ export default function MaterialsContent() {
 
   async function uploadPendingFiles() {
     const files = pendingFiles;
-    if (!files.length || isUploading) return;
+    if (!files.length || isUploading || isAddingCourse || isSavingCourse) return;
     const course = courses.find(item => item.id === pendingCourseId) ?? null;
     setIsUploading(true);
     setPendingFiles([]);
@@ -494,11 +500,12 @@ export default function MaterialsContent() {
                 ))}
               </ul>
               {isAddingCourse ? (
+                <>
                 <input
                   aria-label="New course name"
                   autoFocus
                   className={styles.pendingCourseName}
-                  disabled={isUploading}
+                  disabled={isUploading || isSavingCourse}
                   onChange={(event) => setNewCourseName(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -509,9 +516,29 @@ export default function MaterialsContent() {
                   placeholder="Course name"
                   value={newCourseName}
                 />
+                <button
+                  className={styles.browseButton}
+                  disabled={isSavingCourse || !newCourseName.trim()}
+                  onClick={() => void confirmNewCourse()}
+                  type="button"
+                >
+                  {isSavingCourse ? "Saving…" : "Save course"}
+                </button>
+                <button
+                  className={styles.actionButton}
+                  disabled={isSavingCourse}
+                  onClick={() => {
+                    setIsAddingCourse(false);
+                    setNewCourseName("");
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                </>
               ) : (
                 <select
-                  aria-label="Add course"
+                  aria-label="Select course (optional)"
                   className={styles.pendingCourseSelect}
                   disabled={isUploading}
                   onChange={(event) => {
@@ -523,16 +550,16 @@ export default function MaterialsContent() {
                   }}
                   value={pendingCourseId ?? ""}
                 >
-                  <option value="">Add course</option>
+                  <option value="">Select course (optional)</option>
                   {courses.map(course => (
                     <option key={course.id} value={course.id}>{course.name}</option>
                   ))}
-                  <option value="new">Add a course</option>
+                  <option value="new">Create new course</option>
                 </select>
               )}
               <button
                 className={styles.browseButton}
-                disabled={isUploading}
+                disabled={isUploading || isAddingCourse || isSavingCourse}
                 onClick={() => void uploadPendingFiles()}
                 type="button"
               >
