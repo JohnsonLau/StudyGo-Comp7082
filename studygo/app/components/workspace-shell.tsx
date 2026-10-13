@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { WorkspaceIcon } from "./workspace-icon";
 
 const navigation = [
-  { label: "Welcome", icon: "home" as const, href: "/", id: "home" },
+  { label: "Welcome", icon: "home" as const, href: "/home", id: "home" },
   { label: "Study materials", icon: "folder" as const, href: "/study-materials", id: "materials" },
   { label: "Mock quiz", icon: "quiz" as const, href: "/#mock-quiz", id: "quiz" },
   { label: "Quiz results", icon: "results" as const, href: "/#continue-studying", id: "results" },
