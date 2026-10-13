@@ -1,0 +1,8 @@
+{
+  "nodeModulesDir": "none",
+  "compilerOptions": { "strict": true },
+  "tasks": {
+    "check": "deno check process-study-material/index.ts",
+    "test": "deno test --allow-env process-study-material/handler.test.ts"
+  }
+}

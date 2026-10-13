@@ -378,3 +378,45 @@
     padding-left: 12px;
   }
 }
+
+.actionButton {
+  border: 1px solid #d8d2e8;
+  border-radius: 8px;
+  background: white;
+  color: #60419b;
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.errorText {
+  display: block;
+  max-width: 280px;
+  margin-top: 6px;
+  color: #9b3030;
+}
+
+.extractionCard {
+  margin-top: 24px;
+  padding: 28px;
+  border: 1px solid #e6e1ed;
+  border-radius: 16px;
+  background: white;
+  overflow-wrap: anywhere;
+}
+
+.extractionCard h2,
+.extractionCard h3 {
+  margin: 20px 0 10px;
+}
+
+.extractionCard p,
+.extractionCard dd {
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.extractionCard dt {
+  margin-top: 12px;
+  font-weight: 600;
+}
