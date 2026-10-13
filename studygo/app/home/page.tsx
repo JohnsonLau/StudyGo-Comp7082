@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { WorkspaceShell } from "../components/workspace-shell";
 import { WorkspaceIcon } from "../components/workspace-icon";
 import { createSupabaseServerClient } from "../../utils/supabase/server";
@@ -9,6 +10,7 @@ async function PersonalizedWelcomeHeading() {
   let displayName = "Alex";
 
   if (getSupabaseConfig()) {
+    await connection();
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.getUser();
 

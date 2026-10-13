@@ -108,6 +108,7 @@
   background: #fff;
   color: #353945;
   cursor: pointer;
+  font: inherit;
   font-size: 9px;
   font-weight: 600;
   transition: border-color 0.16s ease, background 0.16s ease;
@@ -116,6 +117,55 @@
 .browseButton:hover {
   border-color: #c9c7e6;
   background: #fbfaff;
+}
+
+.pendingUpload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.pendingUpload ul {
+  margin: 0;
+  padding: 0;
+  color: #303440;
+  font-size: 9px;
+  list-style: none;
+}
+
+.pendingUpload li + li {
+  margin-top: 4px;
+}
+
+.pendingCourseSelect,
+.pendingCourseName {
+  width: 148px;
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  background: #fff;
+  color: #303440;
+  font: inherit;
+  font-size: 8px;
+  padding: 6px 8px;
+}
+
+.pendingCourseName:disabled,
+.pendingCourseSelect:disabled {
+  color: #858793;
+}
+
+.pendingUpload .browseButton {
+  margin-top: 0;
+  border-color: #514caf;
+  background: #514caf;
+  color: #fff;
+}
+
+.pendingUpload .browseButton:hover {
+  border-color: #3f3a96;
+  background: #3f3a96;
 }
 
 .dropZone:focus-within {
@@ -217,6 +267,23 @@
   font-size: 9px;
 }
 
+.libraryControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.libraryControl {
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  background: #fff;
+  color: #303440;
+  font: inherit;
+  font-size: 8px;
+  padding: 6px 8px;
+}
+
 .tableScroller {
   overflow-x: auto;
 }
@@ -236,15 +303,37 @@
 }
 
 .materialTable th:first-child {
-  width: 69%;
+  width: 34%;
 }
 
 .materialTable th:nth-child(2) {
-  width: 13%;
+  width: 22%;
+}
+
+.courseSelect {
+  width: auto;
+  max-width: calc(100% - 16px);
+  margin-inline: 8px;
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  background: #fff;
+  color: #303440;
+  font: inherit;
+  font-size: 8px;
+  padding: 6px 8px;
+}
+
+.courseSelect:disabled {
+  color: #858793;
+  cursor: progress;
 }
 
 .materialTable th:nth-child(3) {
-  width: 13%;
+  width: 12%;
+}
+
+.materialTable th:nth-child(4) {
+  width: 32%;
 }
 
 .materialTable td {
@@ -368,7 +457,7 @@
   }
 
   .materialTable {
-    min-width: 510px;
+    min-width: 760px;
   }
 }
 
@@ -377,6 +466,13 @@
     padding-right: 12px;
     padding-left: 12px;
   }
+}
+
+.rowActions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .actionButton {
@@ -419,4 +515,54 @@
 .extractionCard dt {
   margin-top: 12px;
   font-weight: 600;
+}
+
+.extractionFields {
+  display: grid;
+  gap: 14px;
+}
+
+.extractionFields label,
+.extractionFields fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  color: #303440;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.extractionFields fieldset {
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #efeeeb;
+}
+
+.extractionFields legend {
+  padding: 0;
+}
+
+.extractionFields input,
+.extractionFields textarea {
+  width: 100%;
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  color: #303440;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 8px 10px;
+}
+
+.extractionFields textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.extractionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
