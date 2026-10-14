@@ -4,7 +4,7 @@
   place-items: center;
   background: #6654d6;
   color: #fff;
-  font-size: 22px;
+  font-size: calc(22px + 4pt);
   font-weight: 700;
   letter-spacing: -0.7px;
 }
@@ -70,20 +70,20 @@
 .loginPage :global(.visual-spark) {
   margin-bottom: 23px;
   color: #ffdfac;
-  font-size: 25px;
+  font-size: calc(25px + 4pt);
 }
 
 .loginPage :global(.visual-kicker) {
   margin: 0 0 16px;
   color: #d8d2ff;
-  font-size: 9px;
+  font-size: calc(9px + 4pt);
   font-weight: 700;
   letter-spacing: 1.6px;
 }
 
 .loginPage :global(.login-visual h1) {
   margin: 0;
-  font-size: clamp(39px, 4.2vw, 56px);
+  font-size: calc(clamp(39px, 4.2vw, 56px) + 4pt);
   font-weight: 630;
   line-height: 1.14;
   letter-spacing: -2.8px;
@@ -97,7 +97,7 @@
   max-width: 350px;
   margin: 20px 0 29px;
   color: #e1ddff;
-  font-size: 13px;
+  font-size: calc(13px + 4pt);
   line-height: 1.8;
 }
 
@@ -108,26 +108,26 @@
 
 .loginPage :global(.quote-stars) {
   color: #ffdc98;
-  font-size: 11px;
+  font-size: calc(11px + 4pt);
   letter-spacing: 2px;
 }
 
 .loginPage :global(.visual-quote p) {
   margin: 8px 0 4px;
-  font-size: 12px;
+  font-size: calc(12px + 4pt);
   font-weight: 550;
 }
 
 .loginPage :global(.quote-byline) {
   color: #d0cafa;
-  font-size: 10px;
+  font-size: calc(10px + 4pt);
 }
 
 .loginPage :global(.login-visual-bottom) {
   display: flex;
   justify-content: space-between;
   color: #d3cefa;
-  font-size: 9px;
+  font-size: calc(9px + 4pt);
   letter-spacing: 0.3px;
 }
 
@@ -170,7 +170,7 @@
   align-items: center;
   gap: 8px;
   color: #9699a2;
-  font-size: 10px;
+  font-size: calc(10px + 4pt);
 }
 
 .loginPage :global(.login-top-link a) {
@@ -180,7 +180,7 @@
 
 .loginPage :global(.login-top-link a span) {
   margin-left: 4px;
-  font-size: 13px;
+  font-size: calc(13px + 4pt);
 }
 
 .loginPage :global(.login-card) {
@@ -201,18 +201,18 @@
   border-radius: 11px;
   background: #f1efff;
   color: #6c59d5;
-  font-size: 19px;
+  font-size: calc(19px + 4pt);
 }
 
 .loginPage :global(.login-card .section-label) {
   margin: 0 0 11px;
-  font-size: 9px;
+  font-size: calc(9px + 4pt);
 }
 
 .loginPage :global(.login-card h2) {
   margin: 0;
   color: #272c36;
-  font-size: 34px;
+  font-size: calc(34px + 4pt);
   font-weight: 650;
   letter-spacing: -1.7px;
 }
@@ -220,7 +220,7 @@
 .loginPage :global(.login-intro) {
   margin: 10px 0 29px;
   color: #858a94;
-  font-size: 12px;
+  font-size: calc(12px + 4pt);
   line-height: 1.65;
 }
 
@@ -236,7 +236,7 @@
   background: white;
   color: #373a43;
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px + 4pt);
   font-weight: 600;
   transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -269,7 +269,7 @@
   border-radius: 6px;
   background: #f7f5ff;
   color: #6156a6;
-  font-size: 10px;
+  font-size: calc(10px + 4pt);
   line-height: 1.5;
 }
 
@@ -286,7 +286,7 @@
   padding: 0 12px;
   background: #fff;
   color: #b0b1b8;
-  font-size: 8px;
+  font-size: calc(8px + 4pt);
   font-weight: 650;
   letter-spacing: 1.1px;
 }
@@ -307,25 +307,25 @@
   border-radius: 9px;
   background: #fff3ec;
   color: #e99c7c;
-  font-size: 15px;
+  font-size: calc(15px + 4pt);
 }
 
 .loginPage :global(.reassurance-sun) {
   background: #eff7f0;
   color: #70ad89;
-  font-size: 18px;
+  font-size: calc(18px + 4pt);
 }
 
 .loginPage :global(.login-reassurance strong) {
   color: #4a4c56;
-  font-size: 10px;
+  font-size: calc(10px + 4pt);
   font-weight: 650;
 }
 
 .loginPage :global(.login-reassurance p) {
   margin: 4px 0 0;
   color: #92949d;
-  font-size: 9px;
+  font-size: calc(9px + 4pt);
   line-height: 1.5;
 }
 
@@ -337,7 +337,7 @@
   display: flex;
   justify-content: space-between;
   color: #989ba4;
-  font-size: 9px;
+  font-size: calc(9px + 4pt);
 }
 
 .loginPage :global(.login-footer a) {
@@ -360,7 +360,7 @@
   }
 
   .loginPage :global(.login-visual h1) {
-    font-size: 43px;
+    font-size: calc(43px + 4pt);
   }
 
   .loginPage :global(.login-form-side) {
@@ -404,7 +404,7 @@
   }
 
   .loginPage :global(.login-card h2) {
-    font-size: 32px;
+    font-size: calc(32px + 4pt);
   }
 
   .loginPage :global(.login-footer) {

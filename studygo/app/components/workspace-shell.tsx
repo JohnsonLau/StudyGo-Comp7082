@@ -1,23 +1,114 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { createSupabaseServerClient } from "../../utils/supabase/server";
+import { getSupabaseConfig } from "../../utils/supabase/env";
+import { DarkModeToggle } from "./dark-mode-toggle";
+import { SignOutButton } from "./sign-out-button";
 import { WorkspaceIcon } from "./workspace-icon";
 
 const navigation = [
   { label: "Welcome", icon: "home" as const, href: "/home", id: "home" },
   { label: "Study materials", icon: "folder" as const, href: "/study-materials", id: "materials" },
-  { label: "Mock quiz", icon: "quiz" as const, href: "/#mock-quiz", id: "quiz" },
-  { label: "Quiz results", icon: "results" as const, href: "/#continue-studying", id: "results" },
-  { label: "Schoolwork insights", icon: "insights" as const, href: "/#schoolwork-insights", id: "insights" },
-  { label: "Profile", icon: "profile" as const, href: "/#student-profile", id: "profile" },
-  { label: "Settings", icon: "settings" as const, href: "/#workspace-settings", id: "settings" },
+  { label: "Mock quiz", icon: "quiz" as const, href: "/mock-quiz", id: "quiz" },
+  { label: "Quiz results", icon: "results" as const, href: "/quiz-results", id: "results" },
+  { label: "Schoolwork insights", icon: "insights" as const, href: "/schoolwork-insights", id: "insights" },
+  { label: "Profile", icon: "profile" as const, href: "/profile", id: "profile" },
+  { label: "Settings", icon: "settings" as const, href: "/settings", id: "settings" },
 ];
+
+async function WorkspaceStudent() {
+  let displayName = "Student";
+  let avatarUrl: string | undefined;
+  let streakMessage = "Sign in to track your streak";
+  let streakDetail = "Consecutive UTC days";
+
+  if (getSupabaseConfig()) {
+    await connection();
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+      console.error("Could not load the signed-in user's profile:", error.message);
+    } else if (data.user) {
+      const metadataName = [
+        data.user.user_metadata.full_name,
+        data.user.user_metadata.name,
+        data.user.user_metadata.given_name,
+      ].find((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+      displayName = metadataName?.trim() ?? data.user.email?.split("@")[0] ?? "Student";
+      const metadataAvatar = data.user.user_metadata.avatar_url ?? data.user.user_metadata.picture;
+      if (typeof metadataAvatar === "string" && /^https?:\/\//i.test(metadataAvatar)) {
+        avatarUrl = metadataAvatar;
+      }
+
+      const { data: streak, error: streakError } = await supabase.rpc("record_daily_login");
+      if (streakError) {
+        console.error("Could not load the signed-in user's login streak:", streakError.message);
+        streakMessage = "Login streak unavailable";
+        streakDetail = "Please try again later";
+      } else if (typeof streak === "number") {
+        streakMessage = `${streak} day${streak === 1 ? "" : "s"} in a row`;
+        streakDetail = "Consecutive UTC login days";
+      } else {
+        console.error("Could not load the signed-in user's login streak: unexpected response");
+        streakMessage = "Login streak unavailable";
+        streakDetail = "Please try again later";
+      }
+    }
+  }
+
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toLocaleUpperCase())
+    .join("");
+
+  return (
+    <>
+      <div className="workspace-note">
+        <WorkspaceIcon name="insights" />
+        <strong>{streakMessage}</strong>
+        <span>{streakDetail}</span>
+      </div>
+      <Link className="workspace-student" href="/profile">
+        {avatarUrl ? (
+          <Image className="student-avatar" src={avatarUrl} alt="" width={27} height={27} unoptimized />
+        ) : (
+          <span className="student-avatar">{initials || "S"}</span>
+        )}
+        <span><strong>{displayName}</strong><small>Student workspace</small></span>
+      </Link>
+    </>
+  );
+}
+
+function WorkspaceStudentFallback() {
+  return (
+    <>
+      <div className="workspace-note">
+        <WorkspaceIcon name="insights" />
+        <strong>Loading login streak…</strong>
+        <span>Consecutive UTC login days</span>
+      </div>
+      <Link className="workspace-student" href="/profile">
+        <span className="student-avatar">S</span>
+        <span><strong>Student</strong><small>Student workspace</small></span>
+      </Link>
+    </>
+  );
+}
 
 export function WorkspaceShell({
   active,
   children,
   currentPage,
 }: {
-  active: "home" | "materials";
+  active: "home" | "materials" | "quiz" | "results" | "insights" | "profile" | "settings";
   children: ReactNode;
   currentPage: string;
 }) {
@@ -41,17 +132,12 @@ export function WorkspaceShell({
               <span>{item.label}</span>
             </Link>
           ))}
+          <SignOutButton />
         </nav>
         <div className="workspace-sidebar-bottom">
-          <div className="workspace-note">
-            <WorkspaceIcon name="insights" />
-            <strong>A little progress, every day.</strong>
-            <span>Your next chapter starts here.</span>
-          </div>
-          <Link className="workspace-student" href="/#student-profile">
-            <span className="student-avatar">AL</span>
-            <span><strong>User</strong><small>Student workspace</small></span>
-          </Link>
+          <Suspense fallback={<WorkspaceStudentFallback />}>
+            <WorkspaceStudent />
+          </Suspense>
         </div>
       </aside>
 
@@ -60,10 +146,7 @@ export function WorkspaceShell({
           <p><span>Workspace</span><span className="breadcrumb-divider">/</span><strong>{currentPage}</strong></p>
           <div className="workspace-topbar-actions">
             <span>Fall semester 2026</span>
-            <button className="notification-button" type="button" aria-label="Notifications">
-              <WorkspaceIcon name="bell" />
-              <span className="notification-dot" />
-            </button>
+            <DarkModeToggle />
           </div>
         </header>
         {children}
