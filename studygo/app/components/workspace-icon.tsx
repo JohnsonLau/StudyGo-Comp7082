@@ -9,7 +9,9 @@ export type IconName =
   | "insights"
   | "profile"
   | "settings"
-  | "bell"
+  | "signout"
+  | "moon"
+  | "sun"
   | "upload"
   | "arrow"
   | "leaf"
@@ -26,7 +28,9 @@ export function WorkspaceIcon({ name }: { name: IconName }) {
     insights: <><path d="M9 18h6M10 22h4" /><path d="M8 14.5a7 7 0 1 1 8 0c-1 .7-1.5 1.5-1.5 2.5h-5c0-1-.5-1.8-1.5-2.5Z" /></>,
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
     settings: <><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="2" fill="white" /><circle cx="15" cy="17" r="2" fill="white" /></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></>,
+    signout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" /></>,
+    moon: <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />,
+    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></>,
     upload: <><path d="M12 16V4m0 0L7 9m5-5 5 5" /><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></>,
     arrow: <><path d="M5 12h14M13 6l6 6-6 6" /></>,
     leaf: <><path d="M20 4c-8 0-14 3-14 10a6 6 0 0 0 6 6c7 0 10-7 8-16Z" /><path d="M4 21c2-5 5-8 10-11" /></>,

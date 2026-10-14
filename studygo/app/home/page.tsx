@@ -74,13 +74,13 @@ export default function Home() {
             <span className="shortcut-icon shortcut-purple"><WorkspaceIcon name="quiz" /></span>
             <h2>Test what you know</h2>
             <p>Practice with a mock quiz built from your own notes.</p>
-            <Link href="/home#mock-quiz">Start a mock quiz <WorkspaceIcon name="arrow" /></Link>
+            <Link href="/mock-quiz">Start a mock quiz <WorkspaceIcon name="arrow" /></Link>
           </article>
           <article className="workspace-shortcut" id="schoolwork-insights">
             <span className="shortcut-icon shortcut-purple"><WorkspaceIcon name="insights" /></span>
             <h2>Find your next focus</h2>
             <p>Turn feedback into small, achievable improvements.</p>
-            <Link href="/home#schoolwork-insights">View schoolwork insights <WorkspaceIcon name="arrow" /></Link>
+            <Link href="/schoolwork-insights">View schoolwork insights <WorkspaceIcon name="arrow" /></Link>
           </article>
         </section>
 
@@ -93,7 +93,7 @@ export default function Home() {
               <span>3 study materials · Last studied yesterday</span>
             </div>
             <span className="course-status">Quiz ready</span>
-            <Link className="practice-button" href="/home#mock-quiz">Practice now</Link>
+            <Link className="practice-button" href="/mock-quiz">Practice now</Link>
           </div>
         </section>
       </div>

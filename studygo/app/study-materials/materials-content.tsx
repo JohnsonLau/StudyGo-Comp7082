@@ -22,6 +22,7 @@ type Course = {
 type Material = {
   id: string;
   name: string;
+  storagePath: string;
   size: string;
   courseId: string | null;
   course: string;
@@ -32,7 +33,7 @@ type Material = {
   attempts: number;
 };
 type LibraryRow = {
-  id: string; course_id: string | null; file_name: string; size_bytes: number; created_at: string;
+  id: string; course_id: string | null; file_name: string; storage_path: string; size_bytes: number; created_at: string;
   courses: { name: string } | null;
   file_extractions: {
     status: "processing" | "ready" | "failed"; content: Extraction | null;
@@ -63,14 +64,14 @@ async function loadCourses(): Promise<Course[]> {
 async function loadMaterials(): Promise<Material[]> {
   const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase.from("files")
-    .select("id, course_id, file_name, size_bytes, created_at, courses(name), file_extractions(status, content, error, updated_at, attempts)")
+    .select("id, course_id, file_name, storage_path, size_bytes, created_at, courses(name), file_extractions(status, content, error, updated_at, attempts)")
     .order("created_at", { ascending: false }).returns<LibraryRow[]>();
   if (error) throw new Error("Could not load your library. Please refresh and try again.");
   return (data ?? []).map(file => {
     const extraction = file.file_extractions;
     const interrupted = extraction?.status === "processing" && Date.now() - Date.parse(extraction.updated_at) > 180_000;
     return {
-      id: file.id, name: file.file_name, size: formatSize(file.size_bytes),
+      id: file.id, name: file.file_name, storagePath: file.storage_path, size: formatSize(file.size_bytes),
       added: new Date(file.created_at).toLocaleDateString(),
       courseId: file.course_id, course: file.courses?.name ?? "Unassigned",
       status: interrupted ? "failed" : extraction?.status ?? "uploaded", content: extraction?.content ?? null,
@@ -98,6 +99,7 @@ export default function MaterialsContent() {
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [contentNotice, setContentNotice] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
   const [isAddingCourse, setIsAddingCourse] = useState(false);
@@ -174,6 +176,50 @@ export default function MaterialsContent() {
     } finally {
       assigningIds.current.delete(id);
       setAssigningId(current => current === id ? null : current);
+    }
+  }
+
+  async function deleteMaterial(material: Material) {
+    if (
+      deletingId ||
+      material.status === "uploading" ||
+      material.status === "processing" ||
+      !window.confirm(`Delete "${material.name}" and its extracted study content? This cannot be undone.`)
+    ) {
+      return;
+    }
+
+    setDeletingId(material.id);
+    setError("");
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: deleteError } = await supabase
+        .from("files")
+        .delete()
+        .eq("id", material.id)
+        .select("id")
+        .maybeSingle();
+
+      if (deleteError) throw new Error(`Could not delete this material: ${deleteError.message}`);
+      if (!data) throw new Error("Could not delete this material. It may have already been removed.");
+
+      setMaterials(current => current.filter(item => item.id !== material.id));
+      setSelected(current => current?.fileId === material.id ? null : current);
+
+      const { error: storageError } = await supabase.storage
+        .from("study-materials")
+        .remove([material.storagePath]);
+      if (storageError) {
+        setError(
+          `The material was removed from your library, but its uploaded file could not be removed from storage: ${storageError.message}`,
+        );
+        return;
+      }
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not delete this material. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -315,7 +361,7 @@ export default function MaterialsContent() {
       }
       const id = crypto.randomUUID();
       setMaterials(current => [{ id, name: file.name, size: formatSize(file.size), courseId: null, course: "Unassigned",
-        added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
+        storagePath: "", added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
       try {
         const supabase = createSupabaseBrowserClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -342,6 +388,7 @@ export default function MaterialsContent() {
         }
         updateMaterial(id, {
           status: "uploaded",
+          storagePath: path,
           courseId: assigned && course ? course.id : null,
           course: assigned && course ? course.name : "Unassigned",
         });
@@ -624,6 +671,19 @@ export default function MaterialsContent() {
                     {(material.status === "failed" || material.status === "uploaded") && material.attempts < 3 && (
                       <button type="button" className={styles.actionButton} onClick={() => void processMaterial(material.id)}>Retry processing</button>
                     )}
+                    <button
+                      aria-label={`Delete ${material.name}`}
+                      className={`${styles.actionButton} ${styles.deleteButton}`}
+                      disabled={
+                        material.status === "uploading" ||
+                        material.status === "processing" ||
+                        deletingId !== null
+                      }
+                      onClick={() => void deleteMaterial(material)}
+                      type="button"
+                    >
+                      {deletingId === material.id ? "Deleting…" : "Delete"}
+                    </button>
                     {material.error && <small className={styles.errorText}>{material.error}</small>}
                     {material.status === "failed" && material.attempts >= 3 && <small className={styles.errorText}>Attempt limit reached. Try uploading a smaller or clearer file.</small>}
                   </td>
