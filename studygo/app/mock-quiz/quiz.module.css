@@ -56,3 +56,18 @@
 :global(html[data-theme="dark"]) .root { --quiz-bg: #22232d; --quiz-soft: #34334f; --quiz-ink: #e6e6ee; --quiz-muted: #b7b8c5; --quiz-border: #494a58; --quiz-accent: #bdb5ff; }
 @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; gap: 12px; } .aside { padding: 15px 0; } }
 @media (max-width: 620px) { .card { padding: 20px 16px; } .card h2 { font-size: 22px; } .options label { padding: 12px; gap: 9px; } .countChoices { gap: 8px; } .countChoices label { padding: 12px 9px; font-size: 14px; } }
+.noteChoices { display: grid; gap: 12px; margin: 24px 0; padding: 0; border: 0; min-width: 0; }
+.noteChoices legend { margin-bottom: 12px; font-weight: 650; font-size: 14px; }
+.noteChoices label { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--quiz-border); border-radius: 8px; cursor: pointer; }
+.noteChoices label:has(:checked) { border-color: var(--quiz-accent); background: var(--quiz-soft); }
+.noteChoices label:has(:disabled) { opacity: .65; cursor: default; }
+.noteChoices strong, .historyRow strong { display: block; overflow-wrap: anywhere; font-size: 14px; }
+.noteChoices small, .historyRow small { display: block; margin-top: 5px; color: var(--quiz-muted); line-height: 1.5; }
+.prompt { white-space: pre-line; overflow-wrap: anywhere; }
+.error { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 20px 0; padding: 16px; border: 1px solid #c96b6b; border-radius: 8px; line-height: 1.6; }
+.history { margin-top: 24px; }
+.historyRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; border-top: 1px solid var(--quiz-border); }
+.historyRow > div { min-width: 0; }
+.historyRow button { flex-shrink: 0; }
+.meta span { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 620px) { .historyRow { align-items: flex-start; flex-direction: column; } }

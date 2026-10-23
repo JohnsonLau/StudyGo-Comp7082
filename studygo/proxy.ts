@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "./utils/supabase/env";
+import { getRequestUrl } from "./utils/request-url";
 
 function copyCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
@@ -38,7 +39,7 @@ export async function proxy(request: NextRequest) {
   const { data, error } = await supabase.auth.getClaims();
   if (error) {
     console.error("Supabase session verification failed:", error.message);
-    const loginUrl = new URL("/", request.url);
+    const loginUrl = new URL("/", getRequestUrl(request));
     loginUrl.searchParams.set("error", "auth_check_failed");
     const loginResponse = NextResponse.redirect(loginUrl);
     copyCookies(response, loginResponse);
@@ -46,7 +47,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!data?.claims) {
-    const loginUrl = new URL("/", request.url);
+    const loginUrl = new URL("/", getRequestUrl(request));
     loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     const loginResponse = NextResponse.redirect(loginUrl);
     copyCookies(response, loginResponse);
@@ -57,5 +58,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/home/:path*", "/study-materials/:path*"],
+  matcher: ["/home/:path*", "/study-materials/:path*", "/mock-quiz/:path*", "/quiz-results/:path*"],
 };
