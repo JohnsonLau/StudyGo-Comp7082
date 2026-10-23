@@ -47,3 +47,5 @@ next-env.d.ts
 ../package-lock.json
 
 /upload/
+
+.DS_Store

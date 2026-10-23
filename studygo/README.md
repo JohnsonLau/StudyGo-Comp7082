@@ -13,6 +13,7 @@ Open [http://localhost:3000](http://localhost:3000) to sign in.
 The student workspace is at [http://localhost:3000/home](http://localhost:3000/home).
 The study workspace is at [http://localhost:3000/study-materials](http://localhost:3000/study-materials).
 
+
 ## Configure Google sign-in
 
 1. Copy `.env.example` to `.env.local` and add your Supabase project URL and
