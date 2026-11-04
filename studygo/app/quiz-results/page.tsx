@@ -1,5 +1,10 @@
-import { EmptyWorkspacePage } from "../components/empty-workspace-page";
+import { WorkspaceShell } from "../components/workspace-shell";
+import QuizContent from "../mock-quiz/quiz-content";
 
 export default function QuizResultsPage() {
-  return <EmptyWorkspacePage active="results" title="Quiz results" />;
+  return (
+    <WorkspaceShell active="results" currentPage="Quiz results">
+      <QuizContent resultsOnly />
+    </WorkspaceShell>
+  );
 }
