@@ -191,6 +191,7 @@ export default function QuizContent({ resultsOnly = false }: { resultsOnly?: boo
           <p className={styles.kicker}>Result saved · {quiz.title}</p>
           <h2 id="results-heading" ref={heading} tabIndex={-1}>Every round is a step forward.</h2>
           <div className={styles.score}><strong>{Math.round(score / total * 100)}%</strong><span>{score} of {total} correct · {total - score} to review</span></div>
+          {quiz.elapsed_seconds !== null && <p className={styles.hint}>Time taken: {Math.floor(quiz.elapsed_seconds / 60)}m {quiz.elapsed_seconds % 60}s</p>}
           <h3>Review your answers</h3>
           <div className={styles.review}>
             {questions.map((item, i) => <article key={i}>

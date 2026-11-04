@@ -43,6 +43,36 @@ ownership and processing status, generates questions, validates answers, and
 calculates scores. Browser clients cannot insert or update quiz rows directly.
 No service-role key is needed in the app.
 
+`20261104010000_quiz_submission_integrity.sql` tightens completion-state checks,
+validates submitted indices against each question's options, and adds the
+server-computed `elapsed_seconds` field. Apply both quiz migrations before
+running this version of the app.
+
+### Practice-session API for results and review
+
+The authenticated Supabase RPCs are the server endpoints used by the UI:
+
+| Operation | RPC and parameters | Behavior |
+| --- | --- | --- |
+| Start an attempt | `create_mock_quiz({ p_file_ids: string[], p_count: 3 or 5 })` | Creates a new owned quiz with a question snapshot and server start time (`created_at`). |
+| Finish an attempt | `submit_mock_quiz({ p_quiz_id: string, p_answers: number[] })` | Validates all answers, grades on the server, and atomically stores answers, score, and completion time. |
+
+Both return the saved quiz. Answers are zero-based option indices in question
+order. The client sends no score or timestamps. A failed submission leaves the
+attempt unfinished, and the UI preserves selected answers for retry. Once finished,
+repeated or concurrent submissions return the original result without replacing
+its answers, score, or completion time. Starting again creates a separate attempt.
+
+Victor's results pages can read `mock_quizzes` with the signed-in client and filter
+on non-null `completed_at`. Each row includes `id`, `title`, `source_file_ids`,
+`questions`, `answers`, `score`, `created_at`, `completed_at`, and `elapsed_seconds`.
+`score` is the number correct; the denominator is `questions.length`. Question
+snapshots include options, the correct option index, explanation, and source-note
+identifiers for review. `elapsed_seconds` is null until completion and measures
+wall-clock time since attempt creation, including time away from the page.
+Row-level security restricts reads to the owner. These endpoints currently grade
+the multiple-choice questions produced by the quiz generator.
+
 Validation:
 
 ```bash
@@ -55,7 +85,8 @@ supabase db query --linked --file supabase/tests/mock_quizzes.sql
 ```
 
 The SQL regression suite uses temporary fixtures inside a rolled-back transaction
-and covers generation, duplicate terms, invalid inputs, grading, repeated submission,
+and covers generation, duplicate terms, malformed submissions, full/partial/zero
+scores, persisted answers and timestamps, elapsed time, repeated submission,
 user isolation, and history after source deletion. For a browser check, select notes
 across two courses, finish a quiz, refresh, and review it in Quiz results. Verify
 unprocessed notes are disabled and an insufficient-term selection produces an error.

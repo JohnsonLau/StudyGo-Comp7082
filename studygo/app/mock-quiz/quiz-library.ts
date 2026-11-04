@@ -8,7 +8,7 @@ export type Note = {
   course_id: string | null;
   file_extractions: { status: string; content: { key_terms: { term: string; definition: string }[] } | null } | null;
 };
-export const quizColumns = "id, title, source_file_ids, questions, answers, score, created_at, completed_at";
+export const quizColumns = "id, title, source_file_ids, questions, answers, score, created_at, completed_at, elapsed_seconds";
 
 export async function loadQuizLibrary() {
   const db = createSupabaseBrowserClient();
