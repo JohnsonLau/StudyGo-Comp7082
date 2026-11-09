@@ -1,5 +1,11 @@
-import { EmptyWorkspacePage } from "../components/empty-workspace-page";
+import { WorkspaceShell } from "../components/workspace-shell";
+import InsightsContents from "./insights-contents"
 
 export default function SchoolworkInsightsPage() {
-  return <EmptyWorkspacePage active="insights" title="Schoolwork insights" />;
+  return (
+    <WorkspaceShell active="insights" currentPage="insights">
+      <InsightsContents />
+    </WorkspaceShell>
+  );
+  
 }
