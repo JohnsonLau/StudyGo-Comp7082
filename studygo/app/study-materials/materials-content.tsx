@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { WorkspaceIcon } from "../components/workspace-icon";
 import styles from "./materials.module.css";
+import { tryUnlockAward } from "../../utils/awards";
 import { createSupabaseBrowserClient } from "../../utils/supabase/browser";
 
 type Extraction = {
@@ -464,6 +465,7 @@ export default function MaterialsContent() {
           courseId: assigned && course ? course.id : null,
           course: assigned && course ? course.name : "Unassigned",
         });
+        void tryUnlockAward("unlock_file_upload_award");
         await processMaterial(id);
       } catch (cause) {
         setMaterials(current => current.filter(item => item.id !== id));

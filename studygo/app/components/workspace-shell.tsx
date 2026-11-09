@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { createSupabaseServerClient } from "../../utils/supabase/server";
 import { getSupabaseConfig } from "../../utils/supabase/env";
+import { AwardToastHost } from "./award-toast";
 import { DarkModeToggle } from "./dark-mode-toggle";
 import { SignOutButton } from "./sign-out-button";
 import { WorkspaceIcon } from "./workspace-icon";
@@ -12,6 +13,7 @@ import { WorkspaceIcon } from "./workspace-icon";
 const navigation = [
   { label: "Welcome", icon: "home" as const, href: "/home", id: "home" },
   { label: "Study materials", icon: "folder" as const, href: "/study-materials", id: "materials" },
+  { label: "Awards", icon: "insights" as const, href: "/awards", id: "awards" },
   { label: "Mock quiz", icon: "quiz" as const, href: "/mock-quiz", id: "quiz" },
   { label: "Quiz results", icon: "results" as const, href: "/quiz-results", id: "results" },
   { label: "Schoolwork insights", icon: "insights" as const, href: "/schoolwork-insights", id: "insights" },
@@ -108,7 +110,7 @@ export function WorkspaceShell({
   children,
   currentPage,
 }: {
-  active: "home" | "materials" | "quiz" | "results" | "insights" | "profile" | "settings";
+  active: "home" | "materials" | "quiz" | "results" | "insights" | "profile" | "settings" | "awards";
   children: ReactNode;
   currentPage: string;
 }) {
@@ -151,6 +153,7 @@ export function WorkspaceShell({
         </header>
         {children}
       </div>
+      <AwardToastHost />
     </main>
   );
 }
