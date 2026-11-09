@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { WorkspaceIcon } from "../components/workspace-icon";
 import styles from "./materials.module.css";
+import { tryUnlockAward } from "../../utils/awards";
 import { createSupabaseBrowserClient } from "../../utils/supabase/browser";
 
 type Extraction = {
@@ -26,6 +27,7 @@ type Material = {
   size: string;
   courseId: string | null;
   course: string;
+  tags: string[];
   added: string;
   status: "uploading" | "uploaded" | "processing" | "ready" | "failed";
   content: Extraction | null;
@@ -34,11 +36,22 @@ type Material = {
 };
 type LibraryRow = {
   id: string; course_id: string | null; file_name: string; storage_path: string; size_bytes: number; created_at: string;
+  tags: string[] | null;
   courses: { name: string } | null;
   file_extractions: {
     status: "processing" | "ready" | "failed"; content: Extraction | null;
     error: string | null; updated_at: string; attempts: number;
   } | null;
+};
+type PendingUpload = {
+  id: string;
+  file: File;
+  courseId: string | null;
+};
+type ConfirmDialog = {
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
 };
 const mimeTypes: Record<string, string> = {
   pdf: "application/pdf", doc: "application/msword",
@@ -64,7 +77,7 @@ async function loadCourses(): Promise<Course[]> {
 async function loadMaterials(): Promise<Material[]> {
   const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase.from("files")
-    .select("id, course_id, file_name, storage_path, size_bytes, created_at, courses(name), file_extractions(status, content, error, updated_at, attempts)")
+    .select("id, course_id, file_name, storage_path, size_bytes, created_at, tags, courses(name), file_extractions(status, content, error, updated_at, attempts)")
     .order("created_at", { ascending: false }).returns<LibraryRow[]>();
   if (error) throw new Error("Could not load your library. Please refresh and try again.");
   return (data ?? []).map(file => {
@@ -74,11 +87,16 @@ async function loadMaterials(): Promise<Material[]> {
       id: file.id, name: file.file_name, storagePath: file.storage_path, size: formatSize(file.size_bytes),
       added: new Date(file.created_at).toLocaleDateString(),
       courseId: file.course_id, course: file.courses?.name ?? "Unassigned",
+      tags: file.tags ?? [],
       status: interrupted ? "failed" : extraction?.status ?? "uploaded", content: extraction?.content ?? null,
       error: interrupted ? "Processing was interrupted. Please retry." : extraction?.error ?? null,
       attempts: extraction?.attempts ?? 0,
     };
   });
+}
+
+function normalizeTag(value: string) {
+  return value.trim().replace(/\s+/g, " ");
 }
 
 function formatSize(bytes: number) {
@@ -95,19 +113,21 @@ export default function MaterialsContent() {
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [selected, setSelected] = useState<{ fileId: string; content: Extraction; mode: "view" | "edit" } | null>(null);
+  const [selected, setSelected] = useState<{ fileId: string; content: Extraction; tags: string[]; mode: "view" | "edit" } | null>(null);
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [contentNotice, setContentNotice] = useState("");
+  const [tagDraft, setTagDraft] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
-  const [isAddingCourse, setIsAddingCourse] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<PendingUpload[]>([]);
+  const [addingCourseForId, setAddingCourseForId] = useState<string | null>(null);
   const [isSavingCourse, setIsSavingCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [courseFilter, setCourseFilter] = useState("all");
   const [courseSort, setCourseSort] = useState<"newest" | "name-asc" | "name-desc">("newest");
+  const [tagFilter, setTagFilter] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
   const assigningIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -123,11 +143,17 @@ export default function MaterialsContent() {
   }, []);
 
   const hasProcessing = materials.some(material => material.status === "processing");
+  const tagFilters = tagFilter
+    .split(",")
+    .map(tag => normalizeTag(tag).toLowerCase())
+    .filter(Boolean);
   const visibleMaterials = materials
     .filter(material => {
-      if (courseFilter === "all") return true;
-      if (courseFilter === "unassigned") return material.courseId === null;
-      return material.courseId === courseFilter;
+      if (courseFilter === "unassigned" && material.courseId !== null) return false;
+      if (courseFilter !== "all" && courseFilter !== "unassigned" && material.courseId !== courseFilter) return false;
+      if (tagFilters.length === 0) return true;
+      const materialTags = material.tags.map(tag => tag.toLowerCase());
+      return tagFilters.every(tag => materialTags.some(materialTag => materialTag.includes(tag)));
     })
     .sort((left, right) => {
       if (courseSort === "newest") return 0;
@@ -179,48 +205,53 @@ export default function MaterialsContent() {
     }
   }
 
-  async function deleteMaterial(material: Material) {
-    if (
-      deletingId ||
-      material.status === "uploading" ||
-      material.status === "processing" ||
-      !window.confirm(`Delete "${material.name}" and its extracted study content? This cannot be undone.`)
-    ) {
-      return;
-    }
+  function requestConfirm(message: string, onConfirm: () => void, confirmLabel = "Confirm") {
+    setConfirmDialog({ message, confirmLabel, onConfirm });
+  }
 
-    setDeletingId(material.id);
-    setError("");
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error: deleteError } = await supabase
-        .from("files")
-        .delete()
-        .eq("id", material.id)
-        .select("id")
-        .maybeSingle();
+  function deleteMaterial(material: Material) {
+    if (deletingId || material.status === "uploading" || material.status === "processing") return;
 
-      if (deleteError) throw new Error(`Could not delete this material: ${deleteError.message}`);
-      if (!data) throw new Error("Could not delete this material. It may have already been removed.");
+    requestConfirm(
+      `Delete "${material.name}" and its extracted study content? This cannot be undone.`,
+      () => {
+        void (async () => {
+          setDeletingId(material.id);
+          setError("");
+          try {
+            const supabase = createSupabaseBrowserClient();
+            const { data, error: deleteError } = await supabase
+              .from("files")
+              .delete()
+              .eq("id", material.id)
+              .select("id")
+              .maybeSingle();
 
-      setMaterials(current => current.filter(item => item.id !== material.id));
-      setSelected(current => current?.fileId === material.id ? null : current);
+            if (deleteError) throw new Error(`Could not delete this material: ${deleteError.message}`);
+            if (!data) throw new Error("Could not delete this material. It may have already been removed.");
 
-      const { error: storageError } = await supabase.storage
-        .from("study-materials")
-        .remove([material.storagePath]);
-      if (storageError) {
-        setError(
-          `The material was removed from your library, but its uploaded file could not be removed from storage: ${storageError.message}`,
-        );
-        return;
-      }
-      setError("");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not delete this material. Please try again.");
-    } finally {
-      setDeletingId(null);
-    }
+            setMaterials(current => current.filter(item => item.id !== material.id));
+            setSelected(current => current?.fileId === material.id ? null : current);
+
+            const { error: storageError } = await supabase.storage
+              .from("study-materials")
+              .remove([material.storagePath]);
+            if (storageError) {
+              setError(
+                `The material was removed from your library, but its uploaded file could not be removed from storage: ${storageError.message}`,
+              );
+              return;
+            }
+            setError("");
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Could not delete this material. Please try again.");
+          } finally {
+            setDeletingId(null);
+          }
+        })();
+      },
+      "Delete",
+    );
   }
 
   async function processMaterial(id: string) {
@@ -257,15 +288,46 @@ export default function MaterialsContent() {
   function openContent(material: Material, mode: "view" | "edit") {
     if (material.status !== "ready" || !material.content) return;
     setContentNotice("");
+    setTagDraft("");
     setSelected({
       fileId: material.id,
       mode,
+      tags: [...material.tags],
       content: {
         ...structuredClone(material.content),
         sections: material.content.sections.map(section => ({ ...section })),
         key_terms: material.content.key_terms.map(term => ({ ...term })),
       },
     });
+  }
+
+  function addTag() {
+    if (!selected) return;
+    const tag = normalizeTag(tagDraft);
+    if (!tag) return;
+    if (tag.length > 40) {
+      setError("Each tag must be 40 characters or fewer.");
+      return;
+    }
+    if (selected.tags.some(existing => existing.toLowerCase() === tag.toLowerCase())) {
+      setTagDraft("");
+      return;
+    }
+    if (selected.tags.length >= 20) {
+      setError("A file can have at most 20 tags.");
+      return;
+    }
+    setContentNotice("");
+    setError("");
+    setSelected({ ...selected, tags: [...selected.tags, tag] });
+    setTagDraft("");
+  }
+
+  function removeTag(tag: string) {
+    setContentNotice("");
+    setSelected(current => current
+      ? { ...current, tags: current.tags.filter(existing => existing !== tag) }
+      : current);
   }
 
   function updateDraft(patch: Partial<Extraction>) {
@@ -304,7 +366,14 @@ export default function MaterialsContent() {
         p_content: content,
       });
       if (saveError) throw new Error("Could not save this study content. Please try again.");
-      updateMaterial(selected.fileId, { content });
+      const { data: savedTags, error: tagsError } = await supabase.rpc("update_file_tags", {
+        p_file_id: selected.fileId,
+        p_tags: selected.tags,
+      });
+      if (tagsError) throw new Error("Could not save these tags. Please try again.");
+      const tags = Array.isArray(savedTags) ? savedTags as string[] : selected.tags;
+      updateMaterial(selected.fileId, { content, tags });
+      setSelected(current => current ? { ...current, tags } : current);
       setError("");
       setContentNotice("Saved.");
     } catch (cause) {
@@ -315,14 +384,18 @@ export default function MaterialsContent() {
     }
   }
 
-  async function confirmNewCourse() {
+  function assignPendingCourse(id: string, courseId: string | null) {
+    setPendingFiles(current => current.map(item => item.id === id ? { ...item, courseId } : item));
+  }
+
+  async function confirmNewCourse(pendingId: string) {
     if (isSavingCourse) return;
     const name = newCourseName.trim();
     if (!name) return;
     const existing = courses.find(course => course.name.toLowerCase() === name.toLowerCase());
     if (existing) {
-      setPendingCourseId(existing.id);
-      setIsAddingCourse(false);
+      assignPendingCourse(pendingId, existing.id);
+      setAddingCourseForId(null);
       setNewCourseName("");
       return;
     }
@@ -338,8 +411,8 @@ export default function MaterialsContent() {
       if (insertError) throw new Error(`Could not add this course: ${insertError.message}`);
       if (!data) throw new Error("Could not add this course. Please try again.");
       setCourses(current => [...current, data].sort((left, right) => left.name.localeCompare(right.name)));
-      setPendingCourseId(data.id);
-      setIsAddingCourse(false);
+      assignPendingCourse(pendingId, data.id);
+      setAddingCourseForId(null);
       setNewCourseName("");
       setError("");
     } catch (cause) {
@@ -361,7 +434,7 @@ export default function MaterialsContent() {
       }
       const id = crypto.randomUUID();
       setMaterials(current => [{ id, name: file.name, size: formatSize(file.size), courseId: null, course: "Unassigned",
-        storagePath: "", added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
+        tags: [], storagePath: "", added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
       try {
         const supabase = createSupabaseBrowserClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -392,6 +465,7 @@ export default function MaterialsContent() {
           courseId: assigned && course ? course.id : null,
           course: assigned && course ? course.name : "Unassigned",
         });
+        void tryUnlockAward("unlock_file_upload_award");
         await processMaterial(id);
       } catch (cause) {
         setMaterials(current => current.filter(item => item.id !== id));
@@ -404,7 +478,7 @@ export default function MaterialsContent() {
   }
 
   function stageFiles(files: FileList | File[]) {
-    const accepted: File[] = [];
+    const accepted: PendingUpload[] = [];
     const rejected: string[] = [];
     for (const file of Array.from(files)) {
       const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -412,9 +486,13 @@ export default function MaterialsContent() {
         rejected.push(`${file.name}: use a nonempty PDF, DOCX, DOC, JPEG, or PNG file up to 2 MB.`);
         continue;
       }
-      accepted.push(file);
+      accepted.push({ id: crypto.randomUUID(), file, courseId: null });
     }
-    if (accepted.length) setPendingFiles(accepted);
+    if (accepted.length) {
+      setPendingFiles(accepted);
+      setAddingCourseForId(null);
+      setNewCourseName("");
+    }
     setError(rejected.join(" "));
   }
 
@@ -431,18 +509,67 @@ export default function MaterialsContent() {
     if (!isLoading && event.dataTransfer.files.length) stageFiles(event.dataTransfer.files);
   }
 
-  async function uploadPendingFiles() {
-    const files = pendingFiles;
-    if (!files.length || isUploading || isAddingCourse || isSavingCourse) return;
-    const course = courses.find(item => item.id === pendingCourseId) ?? null;
-    setIsUploading(true);
-    setPendingFiles([]);
+  async function uploadPendingFile(pendingId: string) {
+    const pending = pendingFiles.find(item => item.id === pendingId);
+    if (!pending || uploadingId || addingCourseForId || isSavingCourse) return;
+    const course = courses.find(item => item.id === pending.courseId) ?? null;
+    setUploadingId(pendingId);
+    setPendingFiles(current => current.filter(item => item.id !== pendingId));
     try {
-      const failed = await addFiles(files, course);
-      if (failed.length) setPendingFiles(failed);
+      const failed = await addFiles([pending.file], course);
+      if (failed.length) {
+        setPendingFiles(current => [
+          ...current,
+          { id: pendingId, file: pending.file, courseId: pending.courseId },
+        ]);
+      }
     } finally {
-      setIsUploading(false);
+      setUploadingId(null);
     }
+  }
+
+  function assignCourseToAllPending(courseId: string | null) {
+    if (!pendingFiles.length || uploadingId || addingCourseForId || isSavingCourse) return;
+    const courseName = courseId
+      ? courses.find(course => course.id === courseId)?.name ?? "this course"
+      : "Unassigned";
+    const count = pendingFiles.length;
+    requestConfirm(
+      `Assign ${courseName} to all ${count} pending file${count === 1 ? "" : "s"}?`,
+      () => {
+        setPendingFiles(current => current.map(item => ({ ...item, courseId })));
+      },
+      "Assign",
+    );
+  }
+
+  function uploadAllPendingFiles() {
+    if (!pendingFiles.length || uploadingId || addingCourseForId || isSavingCourse) return;
+    const queue = [...pendingFiles];
+    const count = queue.length;
+    requestConfirm(
+      `Upload all ${count} pending file${count === 1 ? "" : "s"} now?`,
+      () => {
+        void (async () => {
+          setPendingFiles([]);
+          setUploadingId("all");
+          const failed: PendingUpload[] = [];
+          try {
+            for (const pending of queue) {
+              const course = courses.find(item => item.id === pending.courseId) ?? null;
+              const rejected = await addFiles([pending.file], course);
+              if (rejected.length) {
+                failed.push({ id: pending.id, file: pending.file, courseId: pending.courseId });
+              }
+            }
+            if (failed.length) setPendingFiles(current => [...current, ...failed]);
+          } finally {
+            setUploadingId(null);
+          }
+        })();
+      },
+      "Upload all",
+    );
   }
 
   return (
@@ -479,10 +606,120 @@ export default function MaterialsContent() {
               id="study-material-files"
               multiple
               onChange={handleFileChange}
-              disabled={isLoading || isUploading}
+              disabled={isLoading || uploadingId !== null}
               type="file"
             />
           </div>
+          {pendingFiles.length > 0 && (
+            <>
+              <div className={styles.pendingBulkActions}>
+                <select
+                  aria-label="Assign course to all pending files"
+                  className={styles.pendingCourseSelect}
+                  disabled={uploadingId !== null || addingCourseForId !== null || isSavingCourse}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    event.currentTarget.value = "";
+                    if (!value) return;
+                    assignCourseToAllPending(value === "unassigned" ? null : value);
+                  }}
+                  value=""
+                >
+                  <option value="">Assign course to all…</option>
+                  <option value="unassigned">Unassigned</option>
+                  {courses.map(course => (
+                    <option key={course.id} value={course.id}>{course.name}</option>
+                  ))}
+                </select>
+                <button
+                  className={styles.browseButton}
+                  disabled={uploadingId !== null || addingCourseForId !== null || isSavingCourse}
+                  onClick={() => void uploadAllPendingFiles()}
+                  type="button"
+                >
+                  {uploadingId === "all" ? "Uploading…" : "Upload all"}
+                </button>
+              </div>
+              <ul className={styles.pendingUploadList}>
+                {pendingFiles.map(pending => {
+                  const busy = uploadingId !== null || isSavingCourse;
+                  const addingCourse = addingCourseForId === pending.id;
+                  return (
+                    <li className={styles.pendingUpload} key={pending.id}>
+                      <span className={styles.pendingFileName}>{pending.file.name}</span>
+                      {addingCourse ? (
+                        <>
+                          <input
+                            aria-label={`New course name for ${pending.file.name}`}
+                            autoFocus
+                            className={styles.pendingCourseName}
+                            disabled={busy}
+                            onChange={(event) => setNewCourseName(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                void confirmNewCourse(pending.id);
+                              }
+                            }}
+                            placeholder="Course name"
+                            value={newCourseName}
+                          />
+                          <button
+                            className={styles.browseButton}
+                            disabled={isSavingCourse || !newCourseName.trim()}
+                            onClick={() => void confirmNewCourse(pending.id)}
+                            type="button"
+                          >
+                            {isSavingCourse ? "Saving…" : "Save course"}
+                          </button>
+                          <button
+                            className={styles.actionButton}
+                            disabled={isSavingCourse}
+                            onClick={() => {
+                              setAddingCourseForId(null);
+                              setNewCourseName("");
+                            }}
+                            type="button"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <select
+                          aria-label={`Course for ${pending.file.name}`}
+                          className={styles.pendingCourseSelect}
+                          disabled={busy || addingCourseForId !== null}
+                          onChange={(event) => {
+                            if (event.target.value === "new") {
+                              setAddingCourseForId(pending.id);
+                              setNewCourseName("");
+                              return;
+                            }
+                            assignPendingCourse(pending.id, event.target.value || null);
+                          }}
+                          value={pending.courseId ?? ""}
+                        >
+                          <option value="">Select course (optional)</option>
+                          {courses.map(course => (
+                            <option key={course.id} value={course.id}>{course.name}</option>
+                          ))}
+                          <option value="new">Create new course</option>
+                        </select>
+                      )}
+                      <button
+                        className={styles.browseButton}
+                        disabled={busy || addingCourseForId !== null}
+                        onClick={() => void uploadPendingFile(pending.id)}
+                        type="button"
+                      >
+                        {uploadingId === pending.id ? "Uploading…" : "Upload file"}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
           {error ? (
             <p className={styles.uploadMessage} role="alert">{error}</p>
           ) : (
@@ -538,82 +775,14 @@ export default function MaterialsContent() {
               <option value="name-asc">Course name A–Z</option>
               <option value="name-desc">Course name Z–A</option>
             </select>
+            <input
+              aria-label="Filter by tags"
+              className={`${styles.libraryControl} ${styles.tagFilter}`}
+              onChange={(event) => setTagFilter(event.target.value)}
+              placeholder="Tags, comma-separated"
+              value={tagFilter}
+            />
           </div>
-          {pendingFiles.length > 0 && (
-            <div className={styles.pendingUpload}>
-              <ul>
-                {pendingFiles.map(file => (
-                  <li key={`${file.name}-${file.size}-${file.lastModified}`}>{file.name}</li>
-                ))}
-              </ul>
-              {isAddingCourse ? (
-                <>
-                <input
-                  aria-label="New course name"
-                  autoFocus
-                  className={styles.pendingCourseName}
-                  disabled={isUploading || isSavingCourse}
-                  onChange={(event) => setNewCourseName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void confirmNewCourse();
-                    }
-                  }}
-                  placeholder="Course name"
-                  value={newCourseName}
-                />
-                <button
-                  className={styles.browseButton}
-                  disabled={isSavingCourse || !newCourseName.trim()}
-                  onClick={() => void confirmNewCourse()}
-                  type="button"
-                >
-                  {isSavingCourse ? "Saving…" : "Save course"}
-                </button>
-                <button
-                  className={styles.actionButton}
-                  disabled={isSavingCourse}
-                  onClick={() => {
-                    setIsAddingCourse(false);
-                    setNewCourseName("");
-                  }}
-                  type="button"
-                >
-                  Cancel
-                </button>
-                </>
-              ) : (
-                <select
-                  aria-label="Select course (optional)"
-                  className={styles.pendingCourseSelect}
-                  disabled={isUploading}
-                  onChange={(event) => {
-                    if (event.target.value === "new") {
-                      setIsAddingCourse(true);
-                      return;
-                    }
-                    setPendingCourseId(event.target.value || null);
-                  }}
-                  value={pendingCourseId ?? ""}
-                >
-                  <option value="">Select course (optional)</option>
-                  {courses.map(course => (
-                    <option key={course.id} value={course.id}>{course.name}</option>
-                  ))}
-                  <option value="new">Create new course</option>
-                </select>
-              )}
-              <button
-                className={styles.browseButton}
-                disabled={isUploading || isAddingCourse || isSavingCourse}
-                onClick={() => void uploadPendingFiles()}
-                type="button"
-              >
-                Upload file
-              </button>
-            </div>
-          )}
         </div>
         <div className={styles.tableScroller}>
           <table className={styles.materialTable}>
@@ -627,7 +796,7 @@ export default function MaterialsContent() {
             </thead>
             <tbody>
               {!isLoading && materials.length === 0 && <tr><td colSpan={4}>Upload your first study material to get started.</td></tr>}
-              {!isLoading && materials.length > 0 && visibleMaterials.length === 0 && <tr><td colSpan={4}>No materials match this course.</td></tr>}
+              {!isLoading && materials.length > 0 && visibleMaterials.length === 0 && <tr><td colSpan={4}>No materials match these filters.</td></tr>}
               {visibleMaterials.map((material) => (
                 <tr key={material.id}>
                   <td>
@@ -696,6 +865,11 @@ export default function MaterialsContent() {
       {selected?.mode === "view" && (
         <section className={styles.extractionCard} aria-label="Extracted study content">
           <button type="button" className={styles.actionButton} onClick={() => setSelected(null)}>Close content</button>
+          {selected.tags.length > 0 && (
+            <ul className={styles.tagList}>
+              {selected.tags.map(tag => <li key={tag}>{tag}</li>)}
+            </ul>
+          )}
           <h2>{selected.content.title}</h2>
           <p>{selected.content.summary}</p>
           {selected.content.sections.map((section, index) => (
@@ -722,6 +896,46 @@ export default function MaterialsContent() {
               void saveContent();
             }}
           >
+            <div className={styles.extractionActions}>
+              <button className={styles.actionButton} disabled={isSavingContent} type="submit">
+                {isSavingContent ? "Saving…" : "Save content"}
+              </button>
+              <button type="button" className={styles.actionButton} onClick={() => setSelected(null)}>Close content</button>
+            </div>
+            {contentNotice && <p>{contentNotice}</p>}
+            <fieldset>
+              <legend>Tags</legend>
+              <ul className={styles.tagList}>
+                {selected.tags.map(tag => (
+                  <li key={tag}>
+                    <span>{tag}</span>
+                    <button
+                      aria-label={`Remove ${tag}`}
+                      className={styles.tagRemove}
+                      onClick={() => removeTag(tag)}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className={styles.tagComposer}>
+                <input
+                  aria-label="New tag"
+                  onChange={(event) => setTagDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Add a tag"
+                  value={tagDraft}
+                />
+                <button className={styles.actionButton} onClick={addTag} type="button">Add tag</button>
+              </div>
+            </fieldset>
             <label>
               Title
               <input value={selected.content.title} onChange={(event) => updateDraft({ title: event.target.value })} />
@@ -753,15 +967,45 @@ export default function MaterialsContent() {
                 </dl>
               </div>
             )}
-            <div className={styles.extractionActions}>
-              <button className={styles.actionButton} disabled={isSavingContent} type="submit">
-                {isSavingContent ? "Saving…" : "Save content"}
-              </button>
-              <button type="button" className={styles.actionButton} onClick={() => setSelected(null)}>Close content</button>
-            </div>
-            {contentNotice && <p>{contentNotice}</p>}
           </form>
         </section>
+      )}
+      {confirmDialog && (
+        <div
+          className={styles.confirmBackdrop}
+          onClick={() => setConfirmDialog(null)}
+          role="presentation"
+        >
+          <div
+            aria-describedby="confirm-dialog-message"
+            aria-modal="true"
+            className={styles.confirmDialog}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <p id="confirm-dialog-message">{confirmDialog.message}</p>
+            <div className={styles.confirmActions}>
+              <button
+                className={styles.actionButton}
+                onClick={() => setConfirmDialog(null)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className={`${styles.browseButton} ${styles.confirmButton}`}
+                onClick={() => {
+                  const action = confirmDialog.onConfirm;
+                  setConfirmDialog(null);
+                  action();
+                }}
+                type="button"
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

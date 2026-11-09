@@ -1,3 +1,4 @@
+import { tryUnlockAward } from "../../utils/awards";
 import { createSupabaseBrowserClient } from "../../utils/supabase/browser";
 import type { SavedQuiz } from "./quiz-data";
 
@@ -27,11 +28,15 @@ export async function loadQuizLibrary() {
 export async function createQuiz(fileIds: string[], count: number): Promise<SavedQuiz> {
   const { data, error } = await createSupabaseBrowserClient().rpc("create_mock_quiz", { p_file_ids: fileIds, p_count: count });
   if (error) throw new Error(error.message);
+  void tryUnlockAward("unlock_quiz_generation_award");
   return data as SavedQuiz;
 }
 
 export async function submitQuiz(quizId: string, answers: number[]): Promise<SavedQuiz> {
   const { data, error } = await createSupabaseBrowserClient().rpc("submit_mock_quiz", { p_quiz_id: quizId, p_answers: answers });
   if (error) throw new Error(error.message);
+  void tryUnlockAward("unlock_quiz_dedication_award");
+  void tryUnlockAward("unlock_quiz_perfect_award");
+  void tryUnlockAward("unlock_quiz_mastery_award");
   return data as SavedQuiz;
 }

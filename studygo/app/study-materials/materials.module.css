@@ -119,7 +119,53 @@
   background: #fbfaff;
 }
 
-.pendingUpload {
+.confirmBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(24 25 32 / 48%);
+}
+
+.confirmDialog {
+  width: min(100%, 360px);
+  border: 1px solid #e6e1ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgb(24 25 32 / 18%);
+  padding: 20px;
+}
+
+.confirmDialog p {
+  margin: 0;
+  color: #303440;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.confirmButton {
+  margin-top: 0;
+  border-color: #514caf;
+  background: #514caf;
+  color: #fff;
+}
+
+.confirmButton:hover {
+  border-color: #3f3a96;
+  background: #3f3a96;
+}
+
+.pendingBulkActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -127,16 +173,41 @@
   margin-top: 10px;
 }
 
-.pendingUpload ul {
-  margin: 0;
+.pendingBulkActions .browseButton {
+  margin-top: 0;
+  border-color: #514caf;
+  background: #514caf;
+  color: #fff;
+}
+
+.pendingBulkActions .browseButton:hover {
+  border-color: #3f3a96;
+  background: #3f3a96;
+}
+
+.pendingUploadList {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
   padding: 0;
-  color: #303440;
-  font-size: calc(9px + 4pt);
   list-style: none;
 }
 
-.pendingUpload li + li {
-  margin-top: 4px;
+.pendingUpload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.pendingFileName {
+  min-width: 0;
+  flex: 1 1 160px;
+  color: #303440;
+  font-size: calc(9px + 4pt);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pendingCourseSelect,
@@ -282,6 +353,11 @@
   font: inherit;
   font-size: calc(8px + 4pt);
   padding: 6px 8px;
+}
+
+.tagFilter {
+  min-width: 180px;
+  flex: 1 1 180px;
 }
 
 .tableScroller {
@@ -583,6 +659,52 @@
   gap: 8px;
 }
 
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.extractionCard > .tagList {
+  margin-top: 12px;
+}
+
+.tagList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #e0ddd8;
+  border-radius: 999px;
+  background: #f7f5ff;
+  color: #4f4d8a;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+}
+
+.tagRemove {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+}
+
+.tagComposer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagComposer input {
+  flex: 1 1 180px;
+}
+
 :global(html[data-theme="dark"]) .materialsPage {
   color: #e6e6ee;
 }
@@ -590,16 +712,21 @@
 :global(html[data-theme="dark"]) .uploadCard,
 :global(html[data-theme="dark"]) .agentCard,
 :global(html[data-theme="dark"]) .libraryCard,
-:global(html[data-theme="dark"]) .extractionCard {
+:global(html[data-theme="dark"]) .extractionCard,
+:global(html[data-theme="dark"]) .confirmDialog {
   border-color: #343541;
   background: #22232d;
+}
+
+:global(html[data-theme="dark"]) .confirmDialog p {
+  color: #e6e6ee;
 }
 
 :global(html[data-theme="dark"]) .pageHeading h1,
 :global(html[data-theme="dark"]) .uploadCard h2,
 :global(html[data-theme="dark"]) .agentCard h2,
 :global(html[data-theme="dark"]) .libraryHeading h2,
-:global(html[data-theme="dark"]) .pendingUpload ul,
+:global(html[data-theme="dark"]) .pendingFileName,
 :global(html[data-theme="dark"]) .materialTable td:first-child,
 :global(html[data-theme="dark"]) .fileCell strong,
 :global(html[data-theme="dark"]) .extractionCard h2,
@@ -648,6 +775,12 @@
   border-color: #494a58;
   background: #2b2c38;
   color: #e6e6ee;
+}
+
+:global(html[data-theme="dark"]) .tagList li {
+  border-color: #494a58;
+  background: #34334f;
+  color: #c3c1ff;
 }
 
 :global(html[data-theme="dark"]) .browseButton:hover,
