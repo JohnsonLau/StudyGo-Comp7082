@@ -284,6 +284,11 @@
   padding: 6px 8px;
 }
 
+.tagFilter {
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+
 .tableScroller {
   overflow-x: auto;
 }
@@ -583,6 +588,52 @@
   gap: 8px;
 }
 
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.extractionCard > .tagList {
+  margin-top: 12px;
+}
+
+.tagList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #e0ddd8;
+  border-radius: 999px;
+  background: #f7f5ff;
+  color: #4f4d8a;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+}
+
+.tagRemove {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+}
+
+.tagComposer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagComposer input {
+  flex: 1 1 180px;
+}
+
 :global(html[data-theme="dark"]) .materialsPage {
   color: #e6e6ee;
 }
@@ -648,6 +699,12 @@
   border-color: #494a58;
   background: #2b2c38;
   color: #e6e6ee;
+}
+
+:global(html[data-theme="dark"]) .tagList li {
+  border-color: #494a58;
+  background: #34334f;
+  color: #c3c1ff;
 }
 
 :global(html[data-theme="dark"]) .browseButton:hover,

@@ -26,6 +26,7 @@ type Material = {
   size: string;
   courseId: string | null;
   course: string;
+  tags: string[];
   added: string;
   status: "uploading" | "uploaded" | "processing" | "ready" | "failed";
   content: Extraction | null;
@@ -34,6 +35,7 @@ type Material = {
 };
 type LibraryRow = {
   id: string; course_id: string | null; file_name: string; storage_path: string; size_bytes: number; created_at: string;
+  tags: string[] | null;
   courses: { name: string } | null;
   file_extractions: {
     status: "processing" | "ready" | "failed"; content: Extraction | null;
@@ -64,7 +66,7 @@ async function loadCourses(): Promise<Course[]> {
 async function loadMaterials(): Promise<Material[]> {
   const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase.from("files")
-    .select("id, course_id, file_name, storage_path, size_bytes, created_at, courses(name), file_extractions(status, content, error, updated_at, attempts)")
+    .select("id, course_id, file_name, storage_path, size_bytes, created_at, tags, courses(name), file_extractions(status, content, error, updated_at, attempts)")
     .order("created_at", { ascending: false }).returns<LibraryRow[]>();
   if (error) throw new Error("Could not load your library. Please refresh and try again.");
   return (data ?? []).map(file => {
@@ -74,11 +76,16 @@ async function loadMaterials(): Promise<Material[]> {
       id: file.id, name: file.file_name, storagePath: file.storage_path, size: formatSize(file.size_bytes),
       added: new Date(file.created_at).toLocaleDateString(),
       courseId: file.course_id, course: file.courses?.name ?? "Unassigned",
+      tags: file.tags ?? [],
       status: interrupted ? "failed" : extraction?.status ?? "uploaded", content: extraction?.content ?? null,
       error: interrupted ? "Processing was interrupted. Please retry." : extraction?.error ?? null,
       attempts: extraction?.attempts ?? 0,
     };
   });
+}
+
+function normalizeTag(value: string) {
+  return value.trim().replace(/\s+/g, " ");
 }
 
 function formatSize(bytes: number) {
@@ -95,9 +102,10 @@ export default function MaterialsContent() {
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [selected, setSelected] = useState<{ fileId: string; content: Extraction; mode: "view" | "edit" } | null>(null);
+  const [selected, setSelected] = useState<{ fileId: string; content: Extraction; tags: string[]; mode: "view" | "edit" } | null>(null);
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [contentNotice, setContentNotice] = useState("");
+  const [tagDraft, setTagDraft] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -108,6 +116,7 @@ export default function MaterialsContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [courseFilter, setCourseFilter] = useState("all");
   const [courseSort, setCourseSort] = useState<"newest" | "name-asc" | "name-desc">("newest");
+  const [tagFilter, setTagFilter] = useState("");
   const assigningIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -123,11 +132,17 @@ export default function MaterialsContent() {
   }, []);
 
   const hasProcessing = materials.some(material => material.status === "processing");
+  const tagFilters = tagFilter
+    .split(",")
+    .map(tag => normalizeTag(tag).toLowerCase())
+    .filter(Boolean);
   const visibleMaterials = materials
     .filter(material => {
-      if (courseFilter === "all") return true;
-      if (courseFilter === "unassigned") return material.courseId === null;
-      return material.courseId === courseFilter;
+      if (courseFilter === "unassigned" && material.courseId !== null) return false;
+      if (courseFilter !== "all" && courseFilter !== "unassigned" && material.courseId !== courseFilter) return false;
+      if (tagFilters.length === 0) return true;
+      const materialTags = material.tags.map(tag => tag.toLowerCase());
+      return tagFilters.every(tag => materialTags.some(materialTag => materialTag.includes(tag)));
     })
     .sort((left, right) => {
       if (courseSort === "newest") return 0;
@@ -257,15 +272,46 @@ export default function MaterialsContent() {
   function openContent(material: Material, mode: "view" | "edit") {
     if (material.status !== "ready" || !material.content) return;
     setContentNotice("");
+    setTagDraft("");
     setSelected({
       fileId: material.id,
       mode,
+      tags: [...material.tags],
       content: {
         ...structuredClone(material.content),
         sections: material.content.sections.map(section => ({ ...section })),
         key_terms: material.content.key_terms.map(term => ({ ...term })),
       },
     });
+  }
+
+  function addTag() {
+    if (!selected) return;
+    const tag = normalizeTag(tagDraft);
+    if (!tag) return;
+    if (tag.length > 40) {
+      setError("Each tag must be 40 characters or fewer.");
+      return;
+    }
+    if (selected.tags.some(existing => existing.toLowerCase() === tag.toLowerCase())) {
+      setTagDraft("");
+      return;
+    }
+    if (selected.tags.length >= 20) {
+      setError("A file can have at most 20 tags.");
+      return;
+    }
+    setContentNotice("");
+    setError("");
+    setSelected({ ...selected, tags: [...selected.tags, tag] });
+    setTagDraft("");
+  }
+
+  function removeTag(tag: string) {
+    setContentNotice("");
+    setSelected(current => current
+      ? { ...current, tags: current.tags.filter(existing => existing !== tag) }
+      : current);
   }
 
   function updateDraft(patch: Partial<Extraction>) {
@@ -304,7 +350,14 @@ export default function MaterialsContent() {
         p_content: content,
       });
       if (saveError) throw new Error("Could not save this study content. Please try again.");
-      updateMaterial(selected.fileId, { content });
+      const { data: savedTags, error: tagsError } = await supabase.rpc("update_file_tags", {
+        p_file_id: selected.fileId,
+        p_tags: selected.tags,
+      });
+      if (tagsError) throw new Error("Could not save these tags. Please try again.");
+      const tags = Array.isArray(savedTags) ? savedTags as string[] : selected.tags;
+      updateMaterial(selected.fileId, { content, tags });
+      setSelected(current => current ? { ...current, tags } : current);
       setError("");
       setContentNotice("Saved.");
     } catch (cause) {
@@ -361,7 +414,7 @@ export default function MaterialsContent() {
       }
       const id = crypto.randomUUID();
       setMaterials(current => [{ id, name: file.name, size: formatSize(file.size), courseId: null, course: "Unassigned",
-        storagePath: "", added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
+        tags: [], storagePath: "", added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
       try {
         const supabase = createSupabaseBrowserClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -538,6 +591,13 @@ export default function MaterialsContent() {
               <option value="name-asc">Course name A–Z</option>
               <option value="name-desc">Course name Z–A</option>
             </select>
+            <input
+              aria-label="Filter by tags"
+              className={`${styles.libraryControl} ${styles.tagFilter}`}
+              onChange={(event) => setTagFilter(event.target.value)}
+              placeholder="Tags, comma-separated"
+              value={tagFilter}
+            />
           </div>
           {pendingFiles.length > 0 && (
             <div className={styles.pendingUpload}>
@@ -627,7 +687,7 @@ export default function MaterialsContent() {
             </thead>
             <tbody>
               {!isLoading && materials.length === 0 && <tr><td colSpan={4}>Upload your first study material to get started.</td></tr>}
-              {!isLoading && materials.length > 0 && visibleMaterials.length === 0 && <tr><td colSpan={4}>No materials match this course.</td></tr>}
+              {!isLoading && materials.length > 0 && visibleMaterials.length === 0 && <tr><td colSpan={4}>No materials match these filters.</td></tr>}
               {visibleMaterials.map((material) => (
                 <tr key={material.id}>
                   <td>
@@ -696,6 +756,11 @@ export default function MaterialsContent() {
       {selected?.mode === "view" && (
         <section className={styles.extractionCard} aria-label="Extracted study content">
           <button type="button" className={styles.actionButton} onClick={() => setSelected(null)}>Close content</button>
+          {selected.tags.length > 0 && (
+            <ul className={styles.tagList}>
+              {selected.tags.map(tag => <li key={tag}>{tag}</li>)}
+            </ul>
+          )}
           <h2>{selected.content.title}</h2>
           <p>{selected.content.summary}</p>
           {selected.content.sections.map((section, index) => (
@@ -722,6 +787,46 @@ export default function MaterialsContent() {
               void saveContent();
             }}
           >
+            <div className={styles.extractionActions}>
+              <button className={styles.actionButton} disabled={isSavingContent} type="submit">
+                {isSavingContent ? "Saving…" : "Save content"}
+              </button>
+              <button type="button" className={styles.actionButton} onClick={() => setSelected(null)}>Close content</button>
+            </div>
+            {contentNotice && <p>{contentNotice}</p>}
+            <fieldset>
+              <legend>Tags</legend>
+              <ul className={styles.tagList}>
+                {selected.tags.map(tag => (
+                  <li key={tag}>
+                    <span>{tag}</span>
+                    <button
+                      aria-label={`Remove ${tag}`}
+                      className={styles.tagRemove}
+                      onClick={() => removeTag(tag)}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className={styles.tagComposer}>
+                <input
+                  aria-label="New tag"
+                  onChange={(event) => setTagDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Add a tag"
+                  value={tagDraft}
+                />
+                <button className={styles.actionButton} onClick={addTag} type="button">Add tag</button>
+              </div>
+            </fieldset>
             <label>
               Title
               <input value={selected.content.title} onChange={(event) => updateDraft({ title: event.target.value })} />
@@ -753,13 +858,6 @@ export default function MaterialsContent() {
                 </dl>
               </div>
             )}
-            <div className={styles.extractionActions}>
-              <button className={styles.actionButton} disabled={isSavingContent} type="submit">
-                {isSavingContent ? "Saving…" : "Save content"}
-              </button>
-              <button type="button" className={styles.actionButton} onClick={() => setSelected(null)}>Close content</button>
-            </div>
-            {contentNotice && <p>{contentNotice}</p>}
           </form>
         </section>
       )}
