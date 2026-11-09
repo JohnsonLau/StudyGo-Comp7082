@@ -36,6 +36,7 @@ export async function submitQuiz(quizId: string, answers: number[]): Promise<Sav
   const { data, error } = await createSupabaseBrowserClient().rpc("submit_mock_quiz", { p_quiz_id: quizId, p_answers: answers });
   if (error) throw new Error(error.message);
   void tryUnlockAward("unlock_quiz_dedication_award");
+  void tryUnlockAward("unlock_quiz_perfect_award");
   void tryUnlockAward("unlock_quiz_mastery_award");
   return data as SavedQuiz;
 }

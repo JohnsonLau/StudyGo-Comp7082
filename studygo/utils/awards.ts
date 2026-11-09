@@ -33,6 +33,7 @@ export type AwardUnlockRpc =
   | "unlock_file_upload_award"
   | "unlock_quiz_generation_award"
   | "unlock_quiz_dedication_award"
+  | "unlock_quiz_perfect_award"
   | "unlock_quiz_mastery_award";
 
 export async function tryUnlockAward(rpc: AwardUnlockRpc): Promise<AwardUnlockNotice | null> {

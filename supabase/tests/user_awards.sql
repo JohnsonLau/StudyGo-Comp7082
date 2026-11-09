@@ -9,8 +9,8 @@ reset role;
 
 do $$
 begin
-  if (select count(*) from public.awards) <> 5 then
-    raise exception 'Expected 5 seeded awards, got %', (select count(*) from public.awards);
+  if (select count(*) from public.awards) <> 6 then
+    raise exception 'Expected 6 seeded awards, got %', (select count(*) from public.awards);
   end if;
   if not exists (
     select 1 from public.awards
@@ -29,8 +29,8 @@ declare
   unlocked_files integer := 0;
 begin
   select count(*) into rows_found from public.sync_user_awards();
-  if rows_found <> 5 then
-    raise exception 'sync_user_awards should return 5 catalog rows, got %', rows_found;
+  if rows_found <> 6 then
+    raise exception 'sync_user_awards should return 6 catalog rows, got %', rows_found;
   end if;
 
   select count(*) into unlocked_files
@@ -123,6 +123,7 @@ begin
      or not has_function_privilege('authenticated', 'public.unlock_login_streak_award()', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.unlock_quiz_generation_award()', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.unlock_quiz_dedication_award()', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.unlock_quiz_perfect_award()', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.unlock_quiz_mastery_award()', 'EXECUTE') then
     raise exception 'Authenticated users must be able to call award unlock functions';
   end if;
