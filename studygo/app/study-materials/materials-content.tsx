@@ -4,45 +4,9 @@ import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "r
 import { WorkspaceIcon } from "../components/workspace-icon";
 import styles from "./materials.module.css";
 import { tryUnlockAward } from "../../utils/awards";
-import { createSupabaseBrowserClient } from "../../utils/supabase/browser";
+import { MaterialsLogic, type Course, type Extraction, type Material } from "../../utils/materials";
+import { formatSize, mimeTypes, SupabaseMaterials } from "./materials-supabase";
 
-type Extraction = {
-  title: string;
-  kind: string;
-  summary: string;
-  sections: { heading: string; content: string }[];
-  key_terms: { term: string; definition: string }[];
-};
-type Course = {
-  id: string;
-  code: string;
-  name: string;
-  term: string;
-  status: string;
-};
-type Material = {
-  id: string;
-  name: string;
-  storagePath: string;
-  size: string;
-  courseId: string | null;
-  course: string;
-  tags: string[];
-  added: string;
-  status: "uploading" | "uploaded" | "processing" | "ready" | "failed";
-  content: Extraction | null;
-  error: string | null;
-  attempts: number;
-};
-type LibraryRow = {
-  id: string; course_id: string | null; file_name: string; storage_path: string; size_bytes: number; created_at: string;
-  tags: string[] | null;
-  courses: { name: string } | null;
-  file_extractions: {
-    status: "processing" | "ready" | "failed"; content: Extraction | null;
-    error: string | null; updated_at: string; attempts: number;
-  } | null;
-};
 type PendingUpload = {
   id: string;
   file: File;
@@ -53,58 +17,21 @@ type ConfirmDialog = {
   confirmLabel: string;
   onConfirm: () => void;
 };
-const mimeTypes: Record<string, string> = {
-  pdf: "application/pdf", doc: "application/msword",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-};
 const maxFileSize = 2 * 1024 * 1024;
 
 function courseLabel(course: Pick<Course, "code" | "name" | "term">) {
   return [course.code, course.name, course.term].filter(Boolean).join(" · ");
 }
 
-async function loadCourses(): Promise<Course[]> {
-  const supabase = createSupabaseBrowserClient();
-  const { data, error } = await supabase.from("courses")
-    .select("id, code, name, term, status")
-    .order("name", { ascending: true })
-    .returns<Course[]>();
-  if (error) throw new Error("Could not load your courses. Please refresh and try again.");
-  return data ?? [];
-}
-
-async function loadMaterials(): Promise<Material[]> {
-  const supabase = createSupabaseBrowserClient();
-  const { data, error } = await supabase.from("files")
-    .select("id, course_id, file_name, storage_path, size_bytes, created_at, tags, courses(name), file_extractions(status, content, error, updated_at, attempts)")
-    .order("created_at", { ascending: false }).returns<LibraryRow[]>();
-  if (error) throw new Error("Could not load your library. Please refresh and try again.");
-  return (data ?? []).map(file => {
-    const extraction = file.file_extractions;
-    const interrupted = extraction?.status === "processing" && Date.now() - Date.parse(extraction.updated_at) > 180_000;
+function validateFile(file: File): { ok: true; extension: string } | { ok: false; reason: string } {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!mimeTypes[extension] || file.size === 0 || file.size > maxFileSize) {
     return {
-      id: file.id, name: file.file_name, storagePath: file.storage_path, size: formatSize(file.size_bytes),
-      added: new Date(file.created_at).toLocaleDateString(),
-      courseId: file.course_id, course: file.courses?.name ?? "Unassigned",
-      tags: file.tags ?? [],
-      status: interrupted ? "failed" : extraction?.status ?? "uploaded", content: extraction?.content ?? null,
-      error: interrupted ? "Processing was interrupted. Please retry." : extraction?.error ?? null,
-      attempts: extraction?.attempts ?? 0,
+      ok: false,
+      reason: `${file.name}: use a nonempty PDF, DOCX, DOC, JPEG, or PNG file up to 2 MB.`,
     };
-  });
-}
-
-function normalizeTag(value: string) {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) {
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return { ok: true, extension };
 }
 
 export default function MaterialsContent() {
@@ -132,34 +59,22 @@ export default function MaterialsContent() {
 
   useEffect(() => {
     let cancelled = false;
-    loadMaterials()
+    SupabaseMaterials.supabaseLoadMaterials()
       .then(items => { if (!cancelled) setMaterials(items); })
       .catch(() => { if (!cancelled) setError("Could not load your library. Check your connection and Supabase setup, then refresh."); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
-    loadCourses()
+    SupabaseMaterials.supabaseLoadCourses()
       .then(courseList => { if (!cancelled) setCourses(courseList); })
       .catch(() => { if (!cancelled) setError("Could not load your courses. Check your connection and Supabase setup, then refresh."); });
     return () => { cancelled = true; };
   }, []);
 
   const hasProcessing = materials.some(material => material.status === "processing");
-  const tagFilters = tagFilter
-    .split(",")
-    .map(tag => normalizeTag(tag).toLowerCase())
-    .filter(Boolean);
-  const visibleMaterials = materials
-    .filter(material => {
-      if (courseFilter === "unassigned" && material.courseId !== null) return false;
-      if (courseFilter !== "all" && courseFilter !== "unassigned" && material.courseId !== courseFilter) return false;
-      if (tagFilters.length === 0) return true;
-      const materialTags = material.tags.map(tag => tag.toLowerCase());
-      return tagFilters.every(tag => materialTags.some(materialTag => materialTag.includes(tag)));
-    })
-    .sort((left, right) => {
-      if (courseSort === "newest") return 0;
-      const byName = left.course.localeCompare(right.course, undefined, { sensitivity: "base" });
-      return courseSort === "name-asc" ? byName : -byName;
-    });
+  const visibleMaterials = MaterialsLogic.filterAndSortMaterials(materials, {
+    courseFilter,
+    courseSort,
+    tagFilter,
+  });
   const libraryCount = isLoading
     ? "Loading your library…"
     : `${visibleMaterials.length} material${visibleMaterials.length === 1 ? "" : "s"} in your library`;
@@ -167,7 +82,7 @@ export default function MaterialsContent() {
     if (!hasProcessing) return;
     let cancelled = false;
     const timer = setInterval(() => {
-      loadMaterials().then(items => {
+      SupabaseMaterials.supabaseLoadMaterials().then(items => {
         if (!cancelled) setMaterials(current => current.map(item => {
           if (item.status === "uploading" || assigningIds.current.has(item.id)) return item;
           return items.find(saved => saved.id === item.id) ?? item;
@@ -189,12 +104,7 @@ export default function MaterialsContent() {
     setAssigningId(id);
     updateMaterial(id, { courseId, course: course ? course.name : "Unassigned" });
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { error: assignError } = await supabase.rpc("assign_file_course", {
-        p_file_id: id,
-        p_course_id: courseId,
-      });
-      if (assignError) throw new Error("Could not assign this course. Please try again.");
+      await SupabaseMaterials.supabaseAssignFileCourse(id, courseId);
       setError("");
     } catch (cause) {
       updateMaterial(id, { courseId: previous.courseId, course: previous.course });
@@ -219,30 +129,10 @@ export default function MaterialsContent() {
           setDeletingId(material.id);
           setError("");
           try {
-            const supabase = createSupabaseBrowserClient();
-            const { data, error: deleteError } = await supabase
-              .from("files")
-              .delete()
-              .eq("id", material.id)
-              .select("id")
-              .maybeSingle();
-
-            if (deleteError) throw new Error(`Could not delete this material: ${deleteError.message}`);
-            if (!data) throw new Error("Could not delete this material. It may have already been removed.");
-
+            const storageWarning = await SupabaseMaterials.supabaseDeleteFile(material.id, material.storagePath);
             setMaterials(current => current.filter(item => item.id !== material.id));
             setSelected(current => current?.fileId === material.id ? null : current);
-
-            const { error: storageError } = await supabase.storage
-              .from("study-materials")
-              .remove([material.storagePath]);
-            if (storageError) {
-              setError(
-                `The material was removed from your library, but its uploaded file could not be removed from storage: ${storageError.message}`,
-              );
-              return;
-            }
-            setError("");
+            setError(storageWarning ?? "");
           } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Could not delete this material. Please try again.");
           } finally {
@@ -257,24 +147,17 @@ export default function MaterialsContent() {
   async function processMaterial(id: string) {
     updateMaterial(id, { status: "processing", error: null });
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error: invokeError } = await supabase.functions.invoke("process-study-material", { body: { file_id: id } });
-      if (invokeError) {
-        let message = "Could not process this material. Please retry.";
-        if (invokeError.context instanceof Response) {
-          const body = await invokeError.context.json().catch(() => null);
-          if (typeof body?.error === "string") message = body.error;
-        }
-        throw new Error(message);
-      }
-      if (!data?.extraction) throw new Error("No processing result was returned. Please retry.");
-      const extraction = data.extraction;
-      updateMaterial(id, { status: extraction.status, content: extraction.content,
-        error: extraction.error, attempts: extraction.attempts });
+      const extraction = await SupabaseMaterials.supabaseProcessMaterial(id);
+      updateMaterial(id, {
+        status: extraction.status,
+        content: extraction.content,
+        error: extraction.error,
+        attempts: extraction.attempts,
+      });
     } catch (cause) {
       // Check persisted state: a lost HTTP response does not mean the worker failed.
       try {
-        const saved = (await loadMaterials()).find(item => item.id === id);
+        const saved = (await SupabaseMaterials.supabaseLoadMaterials()).find(item => item.id === id);
         if (saved && (saved.status === "ready" || saved.status === "processing")) {
           updateMaterial(id, saved);
           return;
@@ -303,23 +186,15 @@ export default function MaterialsContent() {
 
   function addTag() {
     if (!selected) return;
-    const tag = normalizeTag(tagDraft);
-    if (!tag) return;
-    if (tag.length > 40) {
-      setError("Each tag must be 40 characters or fewer.");
-      return;
-    }
-    if (selected.tags.some(existing => existing.toLowerCase() === tag.toLowerCase())) {
-      setTagDraft("");
-      return;
-    }
-    if (selected.tags.length >= 20) {
-      setError("A file can have at most 20 tags.");
+    const result = MaterialsLogic.canAddTag(selected.tags, tagDraft);
+    if (!result.ok) {
+      if (result.error) setError(result.error);
+      if (result.clearDraft) setTagDraft("");
       return;
     }
     setContentNotice("");
     setError("");
-    setSelected({ ...selected, tags: [...selected.tags, tag] });
+    setSelected({ ...selected, tags: [...selected.tags, result.tag] });
     setTagDraft("");
   }
 
@@ -354,24 +229,15 @@ export default function MaterialsContent() {
   async function saveContent() {
     if (!selected || isSavingContent) return;
     const content = selected.content;
-    if (!content.title.trim() || !content.summary.trim() || content.sections.some(section => !section.heading.trim() || !section.content.trim())) {
-      setError("Add a title, summary, and text for every section before saving.");
+    const validation = MaterialsLogic.validateExtraction(content);
+    if (!validation.ok) {
+      setError(validation.error);
       return;
     }
     setIsSavingContent(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { error: saveError } = await supabase.rpc("update_file_extraction_content", {
-        p_file_id: selected.fileId,
-        p_content: content,
-      });
-      if (saveError) throw new Error("Could not save this study content. Please try again.");
-      const { data: savedTags, error: tagsError } = await supabase.rpc("update_file_tags", {
-        p_file_id: selected.fileId,
-        p_tags: selected.tags,
-      });
-      if (tagsError) throw new Error("Could not save these tags. Please try again.");
-      const tags = Array.isArray(savedTags) ? savedTags as string[] : selected.tags;
+      await SupabaseMaterials.supabaseUpdateFileSummary(selected.fileId, content);
+      const tags = await SupabaseMaterials.supabaseUpdateFileTags(selected.fileId, selected.tags);
       updateMaterial(selected.fileId, { content, tags });
       setSelected(current => current ? { ...current, tags } : current);
       setError("");
@@ -401,15 +267,7 @@ export default function MaterialsContent() {
     }
     setIsSavingCourse(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Please sign in before adding a course.");
-      const { data, error: insertError } = await supabase.from("courses")
-        .insert({ name, user_id: user.id })
-        .select("id, code, name, term, status")
-        .single();
-      if (insertError) throw new Error(`Could not add this course: ${insertError.message}`);
-      if (!data) throw new Error("Could not add this course. Please try again.");
+      const data = await SupabaseMaterials.supabaseAddCourse(name);
       setCourses(current => [...current, data].sort((left, right) => left.name.localeCompare(right.name)));
       assignPendingCourse(pendingId, data.id);
       setAddingCourseForId(null);
@@ -427,37 +285,25 @@ export default function MaterialsContent() {
     const rejected: string[] = [];
     const failed: File[] = [];
     for (const file of Array.from(files)) {
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-      if (!mimeTypes[extension] || file.size === 0 || file.size > maxFileSize) {
-        rejected.push(`${file.name}: use a nonempty PDF, DOCX, DOC, JPEG, or PNG file up to 2 MB.`);
+      const validation = validateFile(file);
+      if (!validation.ok) {
+        rejected.push(validation.reason);
         continue;
       }
       const id = crypto.randomUUID();
       setMaterials(current => [{ id, name: file.name, size: formatSize(file.size), courseId: null, course: "Unassigned",
         tags: [], storagePath: "", added: "Just now", status: "uploading", content: null, error: null, attempts: 0 }, ...current]);
       try {
-        const supabase = createSupabaseBrowserClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) throw new Error("Please sign in before uploading files.");
-        const path = `${user.id}/${id}/source.${extension}`;
-        const { error: uploadError } = await supabase.storage.from("study-materials").upload(path, file, { contentType: mimeTypes[extension] });
-        if (uploadError) throw new Error("Could not upload this file. Check your connection and storage setup.");
-        const { error: insertError } = await supabase.from("files").insert({
-          id, user_id: user.id, file_name: file.name, mime_type: mimeTypes[extension], size_bytes: file.size,
-          storage_path: path, kind: "other",
-        });
-        if (insertError) {
-          await supabase.storage.from("study-materials").remove([path]);
-          throw new Error("Could not save the file record. Please check your profile and try again.");
-        }
+        const path = await SupabaseMaterials.supabaseSendFile(file, id, validation.extension);
         let assigned = !course;
         if (course) {
-          const { error: assignError } = await supabase.rpc("assign_file_course", {
-            p_file_id: id,
-            p_course_id: course.id,
-          });
-          assigned = !assignError;
-          if (assignError) rejected.push(`${file.name}: the file uploaded, but the course could not be assigned.`);
+          try {
+            await SupabaseMaterials.supabaseAssignFileCourse(id, course.id);
+            assigned = true;
+          } catch {
+            assigned = false;
+            rejected.push(`${file.name}: the file uploaded, but the course could not be assigned.`);
+          }
         }
         updateMaterial(id, {
           status: "uploaded",
@@ -481,9 +327,9 @@ export default function MaterialsContent() {
     const accepted: PendingUpload[] = [];
     const rejected: string[] = [];
     for (const file of Array.from(files)) {
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-      if (!mimeTypes[extension] || file.size === 0 || file.size > maxFileSize) {
-        rejected.push(`${file.name}: use a nonempty PDF, DOCX, DOC, JPEG, or PNG file up to 2 MB.`);
+      const validation = validateFile(file);
+      if (!validation.ok) {
+        rejected.push(validation.reason);
         continue;
       }
       accepted.push({ id: crypto.randomUUID(), file, courseId: null });

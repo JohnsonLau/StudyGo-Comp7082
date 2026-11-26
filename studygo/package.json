@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:extraction": "node --experimental-strip-types --test ../supabase/functions/process-study-material/extraction.test.ts"
+    "test:extraction": "node --experimental-strip-types --test ../supabase/functions/process-study-material/extraction.test.ts",
+    "test:materials": "node --import ./tests/register-ts-ext.mjs --experimental-strip-types --test tests/materials.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
